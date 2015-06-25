@@ -19,12 +19,12 @@ data Attr
 instance Show Attr where
   show (ACode _ _ _) = "ACode" -- TODO Print debug information
 
-codeAttrName :: Text
-codeAttrName  = "Code"
+attrName :: Attr -> Text
+attrName (ACode _ _ _)        = "Code"
 
 putAttr :: ConstPool -> Attr -> Put
 putAttr cp attr = do
-  putIx cp $ CUTF8 codeAttrName
+  putIx cp $ CUTF8 $ attrName attr
   let xs = runPut $ putAttrBody attr
   putI32 . fromIntegral $ BS.length xs
   putByteString $ BS.toStrict xs

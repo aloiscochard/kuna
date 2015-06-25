@@ -1,6 +1,6 @@
 module Codec.JVM.ASM.Code where
 
-import Data.Binary.Put (Put, putWord8, putWord16be)
+import Data.Binary.Put (Put, putByteString, putWord8, putWord16be, runPut)
 import Data.Monoid ((<>))
 import Data.Word (Word8, Word16)
 
@@ -8,11 +8,13 @@ import Codec.JVM.ASM.Code.CtrlFlow
 import Codec.JVM.Attr (Attr(ACode))
 import Codec.JVM.Const (Const(..), ConstVal)
 import Codec.JVM.ConstPool (ConstPool)
+import Codec.JVM.Internal (putI16)
 import Codec.JVM.Opcode (Opcode, opcode)
 import Codec.JVM.Types
 
 import qualified Codec.JVM.ConstPool as CP
 import qualified Codec.JVM.Opcode as OP
+import qualified Data.ByteString.Lazy as BS
 
 -- TODO Return `Either` with error if flowVal reach negative value (need to add a flag in Flow)
 toAttr :: Int -> ConstPool -> Code -> Attr
@@ -49,7 +51,7 @@ mkCodeIdx op' c = mkCode' cs 2 f where
   cs = CP.unpack c
   f cp = do
     putOpcode op'
-    putWord16be $ fromIntegral . CP.ix $ CP.unsafeIndex c cp
+    putI16 $ fromIntegral . CP.ix $ CP.unsafeIndex c cp
 
 
 codeBytes :: Int -> Put -> Code

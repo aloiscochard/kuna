@@ -40,7 +40,7 @@ import Data.Text (Text)
 import qualified Data.Set as Set
 
 import Codec.JVM.ASM.Code (Code)
-import Codec.JVM.Attr (codeAttrName)
+import Codec.JVM.Attr (Attr(ACode), attrName)
 import Codec.JVM.Class (ClassFile(..))
 import Codec.JVM.Const (Const(..))
 import Codec.JVM.ConstPool (mkConstPool)
@@ -57,8 +57,8 @@ mkClassFile v afs tc sc mds = ClassFile cp v (Set.fromList afs) tc sc [] [] mis 
     where
       cs = ccs ++ mcs where
         ccs = concat [CP.unpackClassName tc, CP.unpackClassName $ fromMaybe jlObject sc]
-        -- TODO `codeAttrName` should not be added if there is no method with a code attribute.
-        mcs = CUTF8 codeAttrName:(mds >>= unpackMethodDef)
+        -- TODO Add attrName constants from attributes defined on codes, instead of harcoding that one
+        mcs = (CUTF8 $ attrName (ACode 0 0 (return ()))):(mds >>= unpackMethodDef)
       cp = mkConstPool cs
       mis = f <$> mds where
         f (MethodDef afs' n' (MethodDesc d as) code) =
