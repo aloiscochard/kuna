@@ -1,6 +1,7 @@
 module Codec.JVM.ASM.Code where
 
 import Data.ByteString (ByteString)
+import Data.Foldable (fold)
 import Data.Monoid ((<>))
 import Data.Word (Word8, Word16)
 
@@ -8,12 +9,14 @@ import qualified Data.ByteString as BS
 
 import Codec.JVM.ASM.Code.CtrlFlow
 import Codec.JVM.Attr (Attr(ACode))
+import Codec.JVM.Cond (Cond)
 import Codec.JVM.Const (Const(..), ConstVal)
 import Codec.JVM.ConstPool (ConstPool)
 import Codec.JVM.Internal (packI16, packWord16be, putI16)
 import Codec.JVM.Opcode (Opcode, opcode)
 import Codec.JVM.Types
 
+import qualified Codec.JVM.Cond as CD
 import qualified Codec.JVM.ConstPool as CP
 import qualified Codec.JVM.Opcode as OP
 
@@ -36,8 +39,6 @@ instance Monoid Code where
     cf = mappend (ctrlFlow c0) (ctrlFlow c1)
     f cp off = xs <> runCode c1 cp (off + BS.length xs) where
       xs = runCode c0 cp off
-
-
 
 mkCode :: [Const] -> CtrlFlow -> (ConstPool -> Int -> ByteString) -> Code
 mkCode cs cf f = Code cs cf f
@@ -101,6 +102,19 @@ invokestatic = invoke OP.invokestatic
 
 iadd :: Code
 iadd = mkCodeStack OP.iadd $ flowDec 2 <> flowInc 1
+
+iif :: Cond -> Code -> Code -> Code
+iif cond ok ko  = mkCode cs (mkCtrlFlow flow mempty) f where
+  flow = flowDec 1
+  cs = [ok, ko] >>= consts
+  op' = case cond of
+          CD.EQ -> OP.ifeq
+          CD.NE -> OP.ifne
+  f cp off = fold [xs, ys, zs] where
+    xs = fold [packOpcode op', packI16 . fromIntegral $ (BS.length ys + off + 1)]
+    ys = runCode ko cp (off + BS.length xs)
+    zs = fold [packOpcode OP.goto, packI16 . fromIntegral $ (BS.length okbs + 3), okbs] where
+      okbs = runCode ok cp (BS.length xs + BS.length ys + 3)
 
 vreturn :: Code
 vreturn = op 0 OP.vreturn
