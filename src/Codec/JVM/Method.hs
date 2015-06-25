@@ -7,7 +7,7 @@ import Data.Word (Word16)
 import qualified Data.List as L
 import qualified Data.Set as S
 
-import Codec.JVM.Attr (Attr, putAttr)
+import Codec.JVM.Attr (Attr, putAttr, unpackAttr)
 import Codec.JVM.Const (Const(CUTF8))
 import Codec.JVM.ConstPool (ConstPool, putIx)
 import Codec.JVM.Internal (putI16)
@@ -22,6 +22,9 @@ data MethodInfo = MethodInfo
   , descriptor :: Desc
   , attributes :: [Attr] }
   deriving Show
+
+unpackMethodInfo :: MethodInfo -> [Const]
+unpackMethodInfo mi = unpackAttr =<< attributes mi
 
 -- https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-4.html#jvms-4.6-200-A.1
 data AccessFlag

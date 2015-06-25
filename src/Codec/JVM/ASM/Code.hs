@@ -12,7 +12,7 @@ import Codec.JVM.Attr (Attr(ACode))
 import Codec.JVM.Cond (Cond)
 import Codec.JVM.Const (Const(..), ConstVal)
 import Codec.JVM.ConstPool (ConstPool)
-import Codec.JVM.Internal (packI16, packWord16be, putI16)
+import Codec.JVM.Internal (packI16, packWord16be)
 import Codec.JVM.Opcode (Opcode, opcode)
 import Codec.JVM.Types
 
@@ -21,8 +21,8 @@ import qualified Codec.JVM.ConstPool as CP
 import qualified Codec.JVM.Opcode as OP
 
 -- TODO Return `Either` with error if flowVal reach negative value (need to add a flag in Flow)
-toAttr :: Int -> ConstPool -> Code -> Attr
-toAttr as cp code = ACode maxStack' maxLocals' $ runCode code cp 0 where
+toAttrs :: Int -> ConstPool -> Code -> [Attr]
+toAttrs as cp code = [ACode maxStack' maxLocals' $ runCode code cp 0] where
   maxLocals' = max as $ flMax $ cfLocals cf
   maxStack' = flMax $ cfStack cf
   cf = ctrlFlow $ code
@@ -53,7 +53,7 @@ mkCodeStack op' fl = mkCode [] cf $ const $ const (packOpcode op') where
 mkCodeIdx :: Opcode -> Const -> Code
 mkCodeIdx op' c = mkCode' cs 2 f where
   cs = CP.unpack c
-  f cp off =
+  f cp _ =
     (packOpcode op')                                          <>
     (packI16 $ fromIntegral . CP.ix $ CP.unsafeIndex c cp)
 
@@ -88,7 +88,7 @@ invoke op'  mr@(MethodRef _ _ (MethodDesc _ as)) = mkCode cs (mkCtrlFlow flow me
   flow = flowDec as
   c = CMethodRef mr
   cs = CP.unpack c
-  f cp off = do
+  f cp _ = do
     packOpcode op' <> (packWord16be $ fromIntegral . CP.ix $ CP.unsafeIndex c cp)
 
 invokevirtual :: MethodRef -> Code

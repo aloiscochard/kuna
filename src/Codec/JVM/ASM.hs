@@ -2,7 +2,7 @@
 -----------------------------------------------------------------------------
 -- | Usage:
 --
--- You can assemble a java using the Writer DSL:
+-- You can assemble a java class:
 --
 -- @
 -- {-# LANGUAGE OverloadedStrings #-}
@@ -37,11 +37,9 @@ module Codec.JVM.ASM where
 import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 
-import qualified Data.ByteString as BS
 import qualified Data.Set as Set
 
 import Codec.JVM.ASM.Code (Code)
-import Codec.JVM.Attr (Attr(ACode), attrName)
 import Codec.JVM.Class (ClassFile(..))
 import Codec.JVM.Const (Const(..))
 import Codec.JVM.ConstPool (mkConstPool)
@@ -56,14 +54,14 @@ import qualified Codec.JVM.ConstPool as CP
 mkClassFile :: Version -> [Class.AccessFlag] -> IClassName -> Maybe IClassName -> [MethodDef] -> ClassFile
 mkClassFile v afs tc sc mds = ClassFile cp v (Set.fromList afs) tc sc [] [] mis []
     where
-      cs = ccs ++ mcs where
+      cs = ccs ++ mdcs ++ mics where
         ccs = concat [CP.unpackClassName tc, CP.unpackClassName $ fromMaybe jlObject sc]
-        -- TODO Add attrName constants from attributes defined on codes, instead of harcoding that one
-        mcs = (CUTF8 $ attrName (ACode 0 0 BS.empty)):(mds >>= unpackMethodDef)
+        mdcs = mds >>= unpackMethodDef
+        mics = mis >>= Method.unpackMethodInfo
       cp = mkConstPool cs
       mis = f <$> mds where
         f (MethodDef afs' n' (MethodDesc d as) code) =
-          MethodInfo (Set.fromList afs') n' (Desc d) [Code.toAttr as cp code]
+          MethodInfo (Set.fromList afs') n' (Desc d) $ Code.toAttrs as cp code
 
 data MethodDef = MethodDef [Method.AccessFlag] UName MethodDesc Code
 

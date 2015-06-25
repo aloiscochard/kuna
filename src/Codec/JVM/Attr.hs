@@ -24,6 +24,9 @@ instance Show Attr where
 attrName :: Attr -> Text
 attrName (ACode _ _ _)        = "Code"
 
+unpackAttr :: Attr -> [Const]
+unpackAttr = return . CUTF8 . attrName
+
 putAttr :: ConstPool -> Attr -> Put
 putAttr cp attr = do
   putIx cp $ CUTF8 $ attrName attr
