@@ -2,11 +2,12 @@
 module Codec.JVM.Attr where
 
 import Data.ByteString (ByteString)
-import Data.Binary.Put (Put, putByteString, runPut)
+import Data.Binary.Put (Put, putByteString, putWord8, runPut)
 import Data.Text (Text)
 
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
+import qualified Data.Text as Text
 
 import Codec.JVM.Const (Const(CUTF8))
 import Codec.JVM.ConstPool (ConstPool, putIx)
@@ -17,12 +18,14 @@ data Attr
     { maxStack  :: Int
     , maxLocals :: Int
     , code      :: ByteString }
+  | AStackMapTable [StackMapFrame]
 
 instance Show Attr where
-  show (ACode _ _ _) = "ACode" -- TODO Print debug information
+  show attr = "A" ++ (Text.unpack $ attrName attr)
 
 attrName :: Attr -> Text
 attrName (ACode _ _ _)        = "Code"
+attrName (AStackMapTable _)   = "StackMapTable"
 
 unpackAttr :: Attr -> [Const]
 unpackAttr = return . CUTF8 . attrName
@@ -42,3 +45,11 @@ putAttrBody (ACode ms ls xs) = do
   putByteString xs
   putI16 0 -- TODO Exception table
   putI16 0 -- TODO Attributes
+putAttrBody (AStackMapTable xs) = do
+  putI16 $ length xs
+  mapM_ putStackMapFrame xs
+
+data StackMapFrame = Same Int
+
+putStackMapFrame :: StackMapFrame -> Put
+putStackMapFrame (Same i) = putWord8 $ fromIntegral i
