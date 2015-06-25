@@ -37,6 +37,7 @@ module Codec.JVM.ASM where
 import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 
+import qualified Data.ByteString as BS
 import qualified Data.Set as Set
 
 import Codec.JVM.ASM.Code (Code)
@@ -58,7 +59,7 @@ mkClassFile v afs tc sc mds = ClassFile cp v (Set.fromList afs) tc sc [] [] mis 
       cs = ccs ++ mcs where
         ccs = concat [CP.unpackClassName tc, CP.unpackClassName $ fromMaybe jlObject sc]
         -- TODO Add attrName constants from attributes defined on codes, instead of harcoding that one
-        mcs = (CUTF8 $ attrName (ACode 0 0 (return ()))):(mds >>= unpackMethodDef)
+        mcs = (CUTF8 $ attrName (ACode 0 0 BS.empty)):(mds >>= unpackMethodDef)
       cp = mkConstPool cs
       mis = f <$> mds where
         f (MethodDef afs' n' (MethodDesc d as) code) =
