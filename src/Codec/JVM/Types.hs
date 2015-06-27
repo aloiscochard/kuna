@@ -65,6 +65,14 @@ mkFieldDesc' ft = case ft of
   ObjectType (IClassName cn)  -> fold ["L", cn, ";"]
   ArrayType ft'               -> Text.concat ["[", mkFieldDesc' ft']
 
+fieldSize :: FieldType -> Int
+fieldSize (BaseType JLong)    = 2
+fieldSize (BaseType JDouble)  = 2
+fieldSize (BaseType JFloat)   = 2
+fieldSize (ObjectType _ )     = 2
+fieldSize (ArrayType _)       = 2
+fieldSize _                   = 1
+
 prim :: PrimType -> FieldType
 prim = BaseType
 
