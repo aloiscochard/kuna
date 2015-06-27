@@ -19,6 +19,12 @@ data PrimType
   | JBool
   deriving (Eq, Ord, Show)
 
+jInt :: FieldType
+jInt = BaseType JInt
+
+jString :: FieldType
+jString = ObjectType jlString
+
 jlObject :: IClassName
 jlObject = IClassName "java/lang/Object"
 
