@@ -1,35 +1,42 @@
 module Codec.JVM.ASM.Code.CtrlFlow where
 
+import Codec.JVM.Types (FieldType, fieldSize)
+
 data CtrlFlow = CtrlFlow
-  { cfStack  :: Flow
-  , cfLocals :: Flow }
+  { stack  :: Flow
+  , locals :: Flow
+  , offset :: Int }
   deriving Show
 
-instance Monoid CtrlFlow where
-  mempty = CtrlFlow mempty mempty
-  mappend (CtrlFlow s0 l0) (CtrlFlow s1 l1) = CtrlFlow (mappend s0 s1) (mappend l0 l1)
+empty :: CtrlFlow
+empty = CtrlFlow mempty mempty 0
 
-mkCtrlFlow :: Flow -> Flow -> CtrlFlow
-mkCtrlFlow s l = CtrlFlow s l
+maxStack :: CtrlFlow -> Int
+maxStack = flowMax . stack
+
+maxLocals :: CtrlFlow -> Int
+maxLocals = flowMax . locals
+
+incOffset :: Int -> CtrlFlow -> CtrlFlow
+incOffset i cf = cf { offset = offset cf + i }
+
+mapStack :: (Flow -> Flow) -> CtrlFlow -> CtrlFlow
+mapStack f cf = cf { stack = f $ stack cf }
+
+mapLocals :: (Flow -> Flow) -> CtrlFlow -> CtrlFlow
+mapLocals f cf = cf { locals = f $ locals cf }
 
 data Flow = Flow
-  { flOp  :: Int -> Int
-  , flCurrent :: Int
-  , flMax :: Int }
-
-instance Show Flow where
-  show (Flow _ c m) = concat ["Flow(", show c, "/", show m, ")"]
-
-mkFlow :: (Int -> Int) -> Flow
-mkFlow f = Flow f x x where x = f 0
+  { flowBytes :: [FieldType]
+  , flowMax   :: Int }
+  deriving Show
 
 instance Monoid Flow where
-  mempty = mkFlow id
-  mappend (Flow f0 c0 m0) (Flow f1 _ m1) =
-    Flow (f0 . f1) c0' (max (max c0' m0) m1) where c0' = (f1 c0)
+  mempty = Flow mempty 0
+  mappend (Flow fs0 m0) (Flow fs1 m1) = Flow (fs1 ++ fs0) (max m0 m1)
 
-flowInc :: Int -> Flow
-flowInc i = mkFlow $ (+) i
+push :: FieldType -> Flow -> Flow
+push ft (Flow xs i) = Flow (replicate s ft ++ xs) (max i (length xs + s)) where s = fieldSize ft
 
-flowDec :: Int -> Flow
-flowDec i = mkFlow $ (-) i
+pop :: Int -> Flow -> Flow
+pop s (Flow xs i) = Flow (drop s xs) i

@@ -2,7 +2,7 @@ module Kuna.JCore where
 
 import Codec.JVM.ASM.Code (Code)
 import Codec.JVM.Const (ConstVal(..))
-import Codec.JVM.Types (IClassName, FieldType(..), PrimType(..), UName, jlObject, mkMethodRef)
+import Codec.JVM.Types (IClassName, FieldType(..), PrimType(..), UName, jInt, jlObject, mkMethodRef)
 import Data.Foldable (fold)
 import Data.Maybe (fromMaybe)
 import Data.Monoid ((<>))
@@ -44,8 +44,8 @@ unpackLit :: Literal -> JExpr
 unpackLit (LitInt32 bs) = JConst . CInteger $ fromIntegral bs
 
 compConst :: ConstVal -> Code
-compConst (CInteger i) | i < 128    = Code.bipush $ fromIntegral i
-compConst (CInteger i) | i < 32768  = Code.sipush $ fromIntegral i
+compConst (CInteger i) | i < 128    = Code.bipush jInt $ fromIntegral i
+compConst (CInteger i) | i < 32768  = Code.sipush jInt $ fromIntegral i
 compConst cv                        = Code.ldc cv
 
 compJExpr :: JExpr -> Code

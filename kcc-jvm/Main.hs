@@ -25,7 +25,7 @@ simpleExpr =
 
 mainClass :: ClassFile
 mainClass = mkClassFile java8 [] "Main" Nothing
-  [ mkMethodDef [Public, Static] "main" [arr.obj $ "java/lang/String"] void $ fold
+  [ mkMethodDef [Public, Static] "main" [arr jString] void $ fold
     [ getstatic systemOut
     , JCore.compExpr simpleExpr
     , invokevirtual printlnI

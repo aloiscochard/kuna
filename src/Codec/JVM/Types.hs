@@ -95,7 +95,7 @@ data MethodDesc = MethodDesc Text Int -- number of arguments
   deriving (Eq, Ord, Show)
 
 mkMethodDesc :: [FieldType] -> ReturnType -> MethodDesc
-mkMethodDesc fts rt = MethodDesc (mkMethodDesc' fts rt) (length fts) where
+mkMethodDesc fts rt = MethodDesc (mkMethodDesc' fts rt) (length fts)
 
 mkMethodDesc' :: [FieldType] -> ReturnType -> Text
 mkMethodDesc' fts rt = Text.concat ["(", args, ")", ret] where
@@ -105,17 +105,17 @@ mkMethodDesc' fts rt = Text.concat ["(", args, ")", ret] where
 -- | Field or method reference
 -- https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-4.html#jvms-4.4.2
 
-data FieldRef = FieldRef IClassName UName FieldDesc
+data FieldRef = FieldRef IClassName UName FieldType
   deriving (Eq, Ord, Show)
 
 mkFieldRef :: IClassName -> UName -> FieldType -> FieldRef
-mkFieldRef cn un ft = FieldRef cn un (mkFieldDesc ft)
+mkFieldRef cn un ft = FieldRef cn un ft
 
-data MethodRef = MethodRef IClassName UName MethodDesc
+data MethodRef = MethodRef IClassName UName [FieldType] ReturnType
   deriving (Eq, Ord, Show)
 
 mkMethodRef :: IClassName -> UName -> [FieldType] -> ReturnType -> MethodRef
-mkMethodRef cn un fts rt = MethodRef cn un $ mkMethodDesc fts rt
+mkMethodRef cn un fts rt = MethodRef cn un fts rt
 
 data NameAndDesc = NameAndDesc UName Desc
   deriving (Eq, Ord, Show)

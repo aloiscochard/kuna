@@ -3,7 +3,7 @@ module Codec.JVM.Const where
 import Data.Text (Text)
 import Data.Word (Word8)
 
-import Codec.JVM.Types (IClassName, FieldRef, MethodRef, NameAndDesc )
+import Codec.JVM.Types (IClassName, FieldRef, FieldType(..), MethodRef, PrimType(..), NameAndDesc, jlString)
 
 constTag :: Const -> Word8
 constTag (CUTF8 _)              = 1
@@ -29,3 +29,7 @@ data ConstVal
   = CInteger Int
   | CString Text
   deriving (Eq, Ord, Show)
+
+constValType :: ConstVal -> FieldType
+constValType (CInteger _) = BaseType JInt
+constValType (CString _)  = ObjectType jlString

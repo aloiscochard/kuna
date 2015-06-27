@@ -16,6 +16,7 @@ library
   exposed-modules:
     Codec.JVM.ASM
     Codec.JVM.ASM.Code
+    Codec.JVM.ASM.Code.Instr
     Codec.JVM.ASM.Code.CtrlFlow
     Codec.JVM.Attr
     Codec.JVM.Class

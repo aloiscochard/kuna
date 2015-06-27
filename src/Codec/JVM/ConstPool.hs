@@ -49,13 +49,16 @@ unpack c                          = [c]
 unpackClassName :: IClassName -> [Const]
 unpackClassName cn@(IClassName str) = [CClass cn, CUTF8 str]
 
+unpackFieldDesc :: UName -> FieldDesc -> [Const]
+unpackFieldDesc n (FieldDesc t) = unpackNameAndType (NameAndDesc n $ Desc t)
+
 unpackFieldRef :: FieldRef -> [Const]
-unpackFieldRef  ref@(FieldRef cn n (FieldDesc t)) =
-  CFieldRef  ref:unpackClassName cn ++ unpackNameAndType (NameAndDesc n $ Desc t)
+unpackFieldRef  ref@(FieldRef cn n ft) =
+  CFieldRef  ref:unpackClassName cn ++ unpackFieldDesc n (mkFieldDesc ft)
 
 unpackMethodRef :: MethodRef -> [Const]
-unpackMethodRef ref@(MethodRef cn n (MethodDesc t _)) =
-  CMethodRef ref:unpackClassName cn ++ unpackNameAndType (NameAndDesc n $ Desc t)
+unpackMethodRef ref@(MethodRef cn n fts rt) =
+  CMethodRef ref:unpackClassName cn ++ unpackNameAndType (NameAndDesc n $ Desc (mkMethodDesc' fts rt))
 
 unpackNameAndType :: NameAndDesc -> [Const]
 unpackNameAndType nd@(NameAndDesc (UName str0) (Desc str1)) = [CNameAndType nd, CUTF8 str0, CUTF8 str1]
@@ -77,10 +80,10 @@ putConstPool cp = mapM_ putConst $ run cp where
         putIx' $ CUTF8 str
       (CClass (IClassName str)) ->
         putIx' $ CUTF8 str
-      (CFieldRef (FieldRef cn n (FieldDesc d))) -> do
-        putRef cn n d
-      (CMethodRef (MethodRef cn n (MethodDesc d _))) ->
-        putRef cn n d
+      (CFieldRef (FieldRef cn n ft)) -> do
+        putRef cn n $ mkFieldDesc' ft
+      (CMethodRef (MethodRef cn n fts rt)) ->
+        putRef cn n $ mkMethodDesc' fts rt
       (CNameAndType (NameAndDesc (UName n) (Desc d))) -> do
         putIx' $ CUTF8 n
         putIx' $ CUTF8 d

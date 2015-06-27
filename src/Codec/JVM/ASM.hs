@@ -20,7 +20,7 @@
 -- mainClass = mkClassFile java8 [] "HelloWorld" Nothing
 --   [ mkMethodDef [Public, Static] "main" [arr.obj $ "java/lang/String"] void $ fold
 --     [ getstatic systemOut
---     , bipush 42
+--     , bipush jInt 42
 --     , invokevirtual printlnI
 --     , vreturn ]
 --   ]
