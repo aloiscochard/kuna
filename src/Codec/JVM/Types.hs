@@ -28,6 +28,9 @@ jString = ObjectType jlString
 jlObject :: IClassName
 jlObject = IClassName "java/lang/Object"
 
+jlString :: IClassName
+jlString = IClassName "java/lang/String"
+
 -- | Binary class names in their internal form.
 -- https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-4.html#jvms-4.2.1
 newtype IClassName = IClassName Text
