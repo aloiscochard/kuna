@@ -47,6 +47,7 @@ executable kcc-jvm
       base
     , binary
     , bytestring
+    , text
     , kuna
   hs-source-dirs:       kcc-jvm
   ghc-options:          -Wall

@@ -1,13 +1,15 @@
 module Kuna.JCore where
 
 import Codec.JVM.ASM.Code (Code)
+import Codec.JVM.Cond (Cond)
 import Codec.JVM.Const (ConstVal(..))
-import Codec.JVM.Types (IClassName, FieldType(..), PrimType(..), UName, jInt, jlObject, mkMethodRef)
+import Codec.JVM.Types (IClassName, FieldType(..), PrimType(..), UName, jInt, jlObject, jlString, mkMethodRef)
 import Data.Foldable (fold)
 import Data.Maybe (fromMaybe)
 import Data.Monoid ((<>))
 
 import qualified Codec.JVM.ASM.Code as Code
+import qualified Codec.JVM.Cond as CD
 
 import Kuna.Core (Expr(..), Literal(..))
 
@@ -28,17 +30,24 @@ toFieldType (JPrim pt)  = BaseType pt
 toFieldType (JRef cn) = ObjectType cn
 
 fromMachType :: Mach.Type -> JType
-fromMachType Mach.TyInt32  = JPrim JInt
-fromMachType Mach.TyInt64  = JPrim JLong
-fromMachType Mach.TyData   = JRef jlObject
+fromMachType Mach.TyBool  = JPrim JBool
+fromMachType Mach.TyInt32 = JPrim JInt
+fromMachType Mach.TyData  = JRef jlObject
 
 data JName
   = JMethod IClassName UName
   | JOp     Code
 
 data JExpr
-  = JCall   JName [JType] [JExpr] JType
-  | JConst  ConstVal
+  = JConst  ConstVal
+  | JCall   JName [JType] [JExpr] JType
+  | JIf     Cond JExpr JExpr JExpr JType
+
+jExprType :: JExpr -> JType
+jExprType (JConst (CInteger _)) = JPrim JInt
+jExprType (JConst (CString _))  = JRef jlString
+jExprType (JCall _ _ _ tpe)     = tpe
+jExprType (JIf _ _ _ _ tpe)     = tpe
 
 unpackLit :: Literal -> JExpr
 unpackLit (LitInt32 bs) = JConst . CInteger $ fromIntegral bs
@@ -50,6 +59,7 @@ compConst cv                        = Code.ldc cv
 
 compJExpr :: JExpr -> Code
 compJExpr (JConst c) = compConst c
+
 compJExpr (JCall name jts jargs jrt) = argsCode <> compCall name
   where
     argsCode = (fold $ compJExpr <$> jargs)
@@ -57,6 +67,9 @@ compJExpr (JCall name jts jargs jrt) = argsCode <> compCall name
     rt = Just $ toFieldType jrt
     compCall (JMethod cn mn)  = Code.invokestatic mr where mr = mkMethodRef cn mn fts rt
     compCall (JOp c)          = c
+
+compJExpr (JIf cd p ok ko jrt) = compJExpr p <> Code.iif cd rt (compJExpr ok) (compJExpr ko) where
+    rt = Just $ toFieldType jrt
 
 data BuildCall = BuildCall { runBuildCall :: JExpr -> Either BuildCall JExpr }
 
@@ -84,3 +97,11 @@ buildJExpr (Lit lit)                          = Right $ unpackLit lit
 buildJExpr (App expr arg)                     = case buildJExpr expr of
   Left mk -> runBuildCall mk $ unsafeBuildJExpr arg
   Right _ -> error "unexpected App"
+buildJExpr (Fld p ok ko)                     =
+  Right $ JIf CD.NE expP expOK expKO rt
+    where
+      expP = unsafeBuildJExpr p
+      expOK = unsafeBuildJExpr ok
+      expKO = unsafeBuildJExpr ko
+      rt = jExprType expOK
+
