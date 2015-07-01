@@ -11,13 +11,13 @@ import Data.Text (Text)
 
 import qualified Data.ByteString.Lazy as BS
 
-import Kuna.Core (Expr(..), apply, litInt32, machineName, name, var)
+import Kuna.KoreSyn (Expr(..), apply, litInt32, machineName, name, var)
 
-import qualified Kuna.JCore as JCore
-import qualified Kuna.Mach as Mach
+import qualified Kuna.Java as J
+import qualified Kuna.KoreMach as KMach
 
-varM :: Mach.Call -> Expr
-varM = var . machineName . Mach.callId
+varM :: KMach.Call -> Expr
+varM = var . machineName . KMach.callId
 
 varI :: Text -> Expr
 varI = var . name
@@ -31,12 +31,12 @@ conditionExpr =
 
 
 additionExpr :: Expr
-additionExpr = apply (varM Mach.PlusInt32) [litInt32 21, litInt32 21]
+additionExpr = apply (varM KMach.PlusInt32) [litInt32 21, litInt32 21]
 
 mainClass :: ClassFile
 mainClass = mkClassFile java8 [] "Main" Nothing
   [ mkMethodDef [Public, Static] "foo"  []              (return jInt) $ fold
-    [ JCore.compExpr conditionExpr
+    [ J.compExpr conditionExpr
     , ireturn ]
   , mkMethodDef [Public, Static] "main" [arr jString]  void          $ fold
     [ getstatic systemOut

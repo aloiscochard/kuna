@@ -1,4 +1,4 @@
-module Kuna.JCore where
+module Kuna.Java where
 
 import Codec.JVM.ASM.Code (Code)
 import Codec.JVM.Cond (Cond)
@@ -11,10 +11,10 @@ import Data.Monoid ((<>))
 import qualified Codec.JVM.ASM.Code as Code
 import qualified Codec.JVM.Cond as CD
 
-import Kuna.Core (Expr(..), Literal(..))
+import Kuna.KoreSyn (Expr(..), Literal(..))
 
-import qualified Kuna.Core as Core
-import qualified Kuna.Mach as Mach
+import qualified Kuna.KoreSyn as K
+import qualified Kuna.KoreMach as KMach
 
 -- TODO Error handling! (return position, ...)
 
@@ -29,10 +29,10 @@ toFieldType :: JType -> FieldType
 toFieldType (JPrim pt)  = BaseType pt
 toFieldType (JRef cn) = ObjectType cn
 
-fromMachType :: Mach.Type -> JType
-fromMachType Mach.TyBool  = JPrim JBool
-fromMachType Mach.TyInt32 = JPrim JInt
-fromMachType Mach.TyData  = JRef jlObject
+fromMachType :: KMach.Type -> JType
+fromMachType KMach.TyBool  = JPrim JBool
+fromMachType KMach.TyInt32 = JPrim JInt
+fromMachType KMach.TyData  = JRef jlObject
 
 data JName
   = JMethod IClassName UName
@@ -73,25 +73,25 @@ compJExpr (JIf cd p ok ko jrt) = compJExpr p <> Code.iif cd rt (compJExpr ok) (c
 
 data BuildCall = BuildCall { runBuildCall :: JExpr -> Either BuildCall JExpr }
 
-mkBuildCall :: Mach.Call -> ([JExpr] -> JExpr) -> BuildCall
+mkBuildCall :: KMach.Call -> ([JExpr] -> JExpr) -> BuildCall
 mkBuildCall call mk = BuildCall $ f [] where
-  n = length $ Mach.callTypes call
+  n = length $ KMach.callTypes call
   f xs e | length xs < (n-2)  = Left . BuildCall $ f (e:xs)
   f xs e                      = Right . mk $ reverse (e:xs)
 
 unsafeBuildJExpr :: Expr -> JExpr
 unsafeBuildJExpr expr = either (const $ error "unexpected BuildCall") id (buildJExpr expr)
 
-mkJCall :: JName -> Mach.Call -> [JExpr] -> JExpr
+mkJCall :: JName -> KMach.Call -> [JExpr] -> JExpr
 mkJCall n c xs = JCall n (init ys) xs (last ys) where
-  ys = fromMachType <$> Mach.callTypes c
+  ys = fromMachType <$> KMach.callTypes c
 
 buildJExpr :: Expr -> Either BuildCall JExpr
-buildJExpr (Var (Core.Name id' Core.Machine)) = Left $ mkBuildCall call f where
-  call = fromMaybe (error "call not found.") $ Mach.callsById id'
+buildJExpr (Var (K.Name id' K.Machine)) = Left $ mkBuildCall call f where
+  call = fromMaybe (error "call not found.") $ KMach.callsById id'
   f = mkJCall name call
   name = case call of
-    Mach.PlusInt32 -> JOp Code.iadd
+    KMach.PlusInt32 -> JOp Code.iadd
 
 buildJExpr (Lit lit)                          = Right $ unpackLit lit
 buildJExpr (App expr arg)                     = case buildJExpr expr of

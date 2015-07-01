@@ -1,4 +1,4 @@
-module Kuna.Core where
+module Kuna.KoreSyn where
 
 -- import Bound (Var(..))
 import Data.Word (Word32)
