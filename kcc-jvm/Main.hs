@@ -11,18 +11,18 @@ import Data.Text (Text)
 
 import qualified Data.ByteString.Lazy as BS
 
-import Kuna.KoreSyn (Expr(..), apply, litInt32, machineName, name, var)
+import Kuna.KoreSyn (Expr(..), KoreExpr, apply, litInt32, machineName, name, var)
 
 import qualified Kuna.Java as J
 import qualified Kuna.KoreMach as KMach
 
-varM :: KMach.Call -> Expr
+varM :: KMach.Call -> KoreExpr
 varM = var . machineName . KMach.callId
 
-varI :: Text -> Expr
+varI :: Text -> KoreExpr
 varI = var . name
 
-conditionExpr :: Expr
+conditionExpr :: KoreExpr
 conditionExpr =
   (Fld
     (litInt32 1)
@@ -30,7 +30,7 @@ conditionExpr =
     (litInt32 16))
 
 
-additionExpr :: Expr
+additionExpr :: KoreExpr
 additionExpr = apply (varM KMach.PlusInt32) [litInt32 21, litInt32 21]
 
 mainClass :: ClassFile

@@ -11,14 +11,14 @@ import Data.Monoid ((<>))
 import qualified Codec.JVM.ASM.Code as Code
 import qualified Codec.JVM.Cond as CD
 
-import Kuna.KoreSyn (Expr(..), Literal(..))
+import Kuna.KoreSyn (Expr(..), Literal(..), KoreExpr)
 
 import qualified Kuna.KoreSyn as K
 import qualified Kuna.KoreMach as KMach
 
 -- TODO Error handling! (return position, ...)
 
-compExpr :: Expr -> Code
+compExpr :: KoreExpr -> Code
 compExpr = compJExpr . unsafeBuildJExpr
 
 data JType
@@ -79,14 +79,14 @@ mkBuildCall call mk = BuildCall $ f [] where
   f xs e | length xs < (n-2)  = Left . BuildCall $ f (e:xs)
   f xs e                      = Right . mk $ reverse (e:xs)
 
-unsafeBuildJExpr :: Expr -> JExpr
+unsafeBuildJExpr :: KoreExpr -> JExpr
 unsafeBuildJExpr expr = either (const $ error "unexpected BuildCall") id (buildJExpr expr)
 
 mkJCall :: JName -> KMach.Call -> [JExpr] -> JExpr
 mkJCall n c xs = JCall n (init ys) xs (last ys) where
   ys = fromMachType <$> KMach.callTypes c
 
-buildJExpr :: Expr -> Either BuildCall JExpr
+buildJExpr :: KoreExpr -> Either BuildCall JExpr
 buildJExpr (Var (K.Name id' K.Machine)) = Left $ mkBuildCall call f where
   call = fromMaybe (error "call not found.") $ KMach.callsById id'
   f = mkJCall name call
