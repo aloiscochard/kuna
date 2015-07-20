@@ -1,13 +1,13 @@
 module Kuna.Java.KoreComp where
 
 import Data.Maybe (fromMaybe)
-import Kuna.KoreSyn (Expr(..), Literal(..), KoreExpr)
+import Kuna.Kore.Syn (Expr(..), KoreExpr)
 import Kuna.Java.Syn (JExpr(..), JName(..), fromMachType, jExprType, unpackLit)
 
 import qualified Codec.JVM.ASM.Code as Code
 import qualified Codec.JVM.Cond as CD
-import qualified Kuna.KoreSyn as K
-import qualified Kuna.KoreMach as KMach
+import qualified Kuna.Kore.Syn as K
+import qualified Kuna.Kore.Mach as KMach
 
 data BuildCall = BuildCall { runBuildCall :: JExpr -> Either BuildCall JExpr }
 

@@ -1,12 +1,12 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Kuna.KoreMach where
+module Kuna.Kore.Mach where
 
 import Data.Text (Text)
 
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 
-import Kuna.KoreSyn (Name, machineName)
+import Kuna.Kore.Syn (Name, machineName)
 
 data Type
   = TyBool

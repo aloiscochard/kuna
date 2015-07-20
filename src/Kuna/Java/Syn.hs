@@ -5,8 +5,8 @@ import Codec.JVM.Cond (Cond)
 import Codec.JVM.Const (ConstVal(..))
 import Codec.JVM.Types (IClassName, FieldType(..), PrimType(..), UName, jlObject, jlString)
 
-import Kuna.KoreSyn (Literal(..))
-import qualified Kuna.KoreMach as KMach
+import Kuna.Kore.Syn (Literal(..))
+import qualified Kuna.Kore.Mach as KMach
 
 data JType
   = JPrim PrimType

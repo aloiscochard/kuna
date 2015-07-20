@@ -28,8 +28,8 @@ library
     Codec.JVM.Method
     Codec.JVM.Opcode
     Codec.JVM.Types
-    Kuna.KoreSyn
-    Kuna.KoreMach
+    Kuna.Kore.Syn
+    Kuna.Kore.Mach
     Kuna.Java
     Kuna.Java.Syn
     Kuna.Java.KoreComp

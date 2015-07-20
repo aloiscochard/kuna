@@ -11,10 +11,10 @@ import Data.Text (Text)
 
 import qualified Data.ByteString.Lazy as BS
 
-import Kuna.KoreSyn (Expr(..), KoreExpr, apply, litInt32, machineName, name, var)
+import Kuna.Kore.Syn (Expr(..), KoreExpr, apply, litInt32, machineName, name, var)
 
 import qualified Kuna.Java as J
-import qualified Kuna.KoreMach as KMach
+import qualified Kuna.Kore.Mach as KMach
 
 varM :: KMach.Call -> KoreExpr
 varM = var . machineName . KMach.callId
