@@ -14,8 +14,8 @@ data Expr b
   | Lit Literal
   | App (Expr b) (Arg b)
   | Fld (Pre b) (Expr b) (Expr b)
-  -- | Lam Name Expr
-  -- | Let Bind Expr
+--  | Lam b (Expr b)
+  | Let (Bind b) (Expr b)
 
 apply :: Expr b -> [Expr b] -> Expr b
 apply v as = foldr f v as where f a tree = App tree a
