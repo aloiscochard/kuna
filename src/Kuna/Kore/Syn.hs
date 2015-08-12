@@ -26,9 +26,13 @@ data Literal =
 litInt32 :: Int -> Expr b
 litInt32 = Lit . LitInt32 . fromIntegral
 
+bind :: Text -> KoreExpr -> KoreExpr -> KoreExpr
+bind txt e = Let $ Bind (Name txt Internal) e
+
 data Name = Name
   { nameId    :: Text
   , nameSort  :: NameSort }
+  deriving (Eq, Ord)
 
 var :: Name -> KoreExpr
 var = Var
@@ -45,3 +49,4 @@ data NameSort
   = Internal
   -- | External Module
   | Machine
+  deriving (Eq, Ord, Show)

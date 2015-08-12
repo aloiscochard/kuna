@@ -1,50 +1,112 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Kuna.Java.KoreComp where
 
-import Data.Maybe (fromMaybe)
-import Kuna.Kore.Syn (Expr(..), KoreExpr)
-import Kuna.Java.Syn (JExpr(..), JName(..), fromMachType, jExprType, unpackLit)
+import Control.Monad.Trans.RWS.Strict
+import Data.Text (Text)
+import Text.Printf (printf)
 
 import qualified Codec.JVM.ASM.Code as Code
 import qualified Codec.JVM.Cond as CD
-import qualified Kuna.Kore.Syn as K
+import qualified Data.Map.Strict as Map
+
+import Kuna.Internal()
+import Kuna.Kore.Syn (Expr(..), KoreExpr, Bind(..))
+import Kuna.Java.Syn (JExpr(..), CName(..), VName(..), fromMachType, jExprType, unpackLit, unpackLit')
+import Kuna.Java.KoreComp.Types
+
 import qualified Kuna.Kore.Mach as KMach
+import qualified Kuna.Kore.Syn as K
 
-data BuildCall = BuildCall { runBuildCall :: JExpr -> Either BuildCall JExpr }
-
-mkBuildCall :: KMach.Call -> ([JExpr] -> JExpr) -> BuildCall
-mkBuildCall call mk = BuildCall $ f [] where
-  n = length $ KMach.callTypes call
-  f xs e | length xs < (n-2)  = Left . BuildCall $ f (e:xs)
-  f xs e                      = Right . mk $ reverse (e:xs)
+buildJExpr :: KoreExpr -> ([Error], CompExpr)
+buildJExpr expr = runKoreComp emptyScope $ compExpr expr
 
 unsafeBuildJExpr :: KoreExpr -> JExpr
-unsafeBuildJExpr expr = either (const $ error "unexpected BuildCall") id (buildJExpr expr)
+unsafeBuildJExpr expr = f $ buildJExpr expr where
+  f (_, Done jexpr)  = jexpr
+  f (_, Partial _)   = error "Unexpected partial expression."
+  f (es, Failure)    = error $ unlines $ f' <$> es where f' (Error msg) = msg
 
-mkJCall :: JName -> KMach.Call -> [JExpr] -> JExpr
+mkJCall :: CName -> KMach.Call -> [JExpr] -> JExpr
 mkJCall n c xs = JCall n (init ys) xs (last ys) where
   ys = fromMachType <$> KMach.callTypes c
 
-buildJExpr :: KoreExpr -> Either BuildCall JExpr
-buildJExpr (Var (K.Name id' K.Machine)) = Left $ mkBuildCall call f where
-  call = fromMaybe (error "call not found.") $ KMach.callsById id'
-  f = mkJCall name call
-  name = case call of
-    KMach.PlusInt32 -> JOp Code.iadd
+runKoreComp :: Scope -> KoreComp a -> ([Error], a)
+runKoreComp scope expr = f $ runRWS expr mempty scope where f (a, _, es) = (es, a)
 
-buildJExpr (Lit lit) = Right $ unpackLit lit
+scoped :: KoreComp a -> KoreComp a
+scoped kc = do
+  scope <- get
+  x <- kc
+  put scope
+  return x
 
-buildJExpr (App expr arg) = case buildJExpr expr of
-  Left mk -> runBuildCall mk $ unsafeBuildJExpr arg
-  Right _ -> error "unexpected App"
+throw ::  String -> KoreComp CompExpr
+throw msg = do
+  tell $ [Error msg]
+  return Failure
 
-buildJExpr (Fld p ok ko) =
-  Right $ JIf CD.NE expP expOK expKO rt
-    where
-      expP = unsafeBuildJExpr p
-      expOK = unsafeBuildJExpr ok
-      expKO = unsafeBuildJExpr ko
-      rt = jExprType expOK
+bind :: Text -> JExpr -> KoreComp ()
+bind n v = modify f where f (Scope i xs) = Scope i $ Map.insert n v xs
 
-buildJExpr (Let bind expr) =
-  -- TODO Add bind in scope to build field
-  buildJExpr expr
+bindVar :: Text -> (Int -> JExpr) -> KoreComp Int
+bindVar n f = do
+  i <- next
+  bind n $ f i
+  modify inc
+  return i where
+    next = get >>= \(Scope i _) -> return $ i + 1
+    inc (Scope i xs) = Scope (i + 1) xs
+
+bindVar_ :: Text -> (Int -> JExpr) -> KoreComp ()
+bindVar_ n f = bindVar n f >> return ()
+
+compExpr :: KoreExpr -> KoreComp CompExpr
+compExpr (Var (K.Name id' K.Machine)) =
+  maybe (throw $ printf "Machine call '%v' not found." id') f $ KMach.callsById id' where
+    f call = return . Partial $ callBldr call $ mkJCall name call where
+      name = case call of
+        KMach.PlusInt32 -> JOp Code.iadd
+
+compExpr (Var (K.Name id' K.Internal)) = do
+  (Scope _ ls) <- get
+  case Map.lookup id' ls of
+    Just expr -> return $ Done expr
+    Nothing   -> throw $ printf "Local variable '%v' not bound." id'
+
+compExpr (Lit lit) = return . Done $ unpackLit lit
+
+compExpr (App expr arg) = do
+  ce <- compExpr expr
+  case ce of
+    Partial mk  -> doneOrFail arg f where
+      f jexp = return $ buildCall mk jexp
+    Done _      -> throw "unexpected App"
+    Failure     -> return Failure
+
+compExpr (Fld p ok ko) =
+  scoped $ doneOrFail p fP where
+    fP jexpP = scoped $ doneOrFail ok fOK where
+      fOK jexpOK = scoped $ doneOrFail ko fKO where
+        fKO jexpKO = return . Done $ JIf CD.NE jexpP jexpOK jexpKO rt where
+          rt = jExprType jexpOK
+
+compExpr (Let (Bind (K.Name id' K.Internal) bexpr)  expr) = do
+  case bexpr of
+    (Lit lit) -> do
+      bind id' $ JConst $ unpackLit' lit
+      compExpr expr
+    bexpr'    -> doneOrFail bexpr' f where
+      f jexp = do
+        bindVar_ id' $ \i -> JVar $ JLocalVar i $ jExprType jexp
+        compExpr expr
+
+compExpr (Let (Bind (K.Name id' sort) _)  _) =
+  throw $ printf "Invalid name sort '%v' in local binding '%v'." (show sort) id'
+
+doneOrFail :: KoreExpr -> (JExpr -> KoreComp CompExpr) -> KoreComp CompExpr
+doneOrFail ke f = do
+      ce' <- compExpr ke
+      case ce' of
+        Done jexpr  -> f jexpr
+        Partial _   -> throw "unexpected CallBldr"
+        Failure     -> return Failure

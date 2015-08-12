@@ -11,7 +11,7 @@ import Data.Text (Text)
 
 import qualified Data.ByteString.Lazy as BS
 
-import Kuna.Kore.Syn (Expr(..), KoreExpr, apply, litInt32, machineName, name, var)
+import Kuna.Kore.Syn (Expr(..), KoreExpr, apply, bind, litInt32, machineName, name, var)
 
 import qualified Kuna.Java as J
 import qualified Kuna.Kore.Mach as KMach
@@ -29,14 +29,13 @@ conditionExpr =
     (litInt32 8)
     (litInt32 16))
 
-
 additionExpr :: KoreExpr
-additionExpr = apply (varM KMach.PlusInt32) [litInt32 21, litInt32 21]
+additionExpr = bind "x" (litInt32 21) $ apply (varM KMach.PlusInt32) [varI "x", varI "x"]
 
 mainClass :: ClassFile
 mainClass = mkClassFile java8 [] "Main" Nothing
   [ mkMethodDef [Public, Static] "foo"  []              (return jInt) $ fold
-    [ J.compExpr conditionExpr
+    [ J.compExpr additionExpr
     , ireturn ]
   , mkMethodDef [Public, Static] "main" [arr jString]  void          $ fold
     [ getstatic systemOut

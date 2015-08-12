@@ -21,14 +21,22 @@ fromMachType KMach.TyBool  = JPrim JBool
 fromMachType KMach.TyInt32 = JPrim JInt
 fromMachType KMach.TyData  = JRef jlObject
 
-data JName
+data CName
   = JMethod IClassName UName
   | JOp     Code
 
+data VName
+  = JLocalVar Int JType
+  -- | JField
+
 data JExpr
-  = JConst  ConstVal
-  | JCall   JName [JType] [JExpr] JType
+  = JVar    VName
+  | JConst  ConstVal
+  | JCall   CName [JType] [JExpr] JType
   | JIf     Cond JExpr JExpr JExpr JType
+  | JLocal  BindLocal JExpr
+
+data BindLocal = BindLocal Int JExpr JType
 
 jExprType :: JExpr -> JType
 jExprType (JConst (CInteger _)) = JPrim JInt
@@ -37,5 +45,8 @@ jExprType (JCall _ _ _ tpe)     = tpe
 jExprType (JIf _ _ _ _ tpe)     = tpe
 
 unpackLit :: Literal -> JExpr
-unpackLit (LitInt32 bs) = JConst . CInteger $ fromIntegral bs
+unpackLit = JConst . unpackLit'
+
+unpackLit' :: Literal -> ConstVal
+unpackLit' (LitInt32 bs) = CInteger $ fromIntegral bs
 

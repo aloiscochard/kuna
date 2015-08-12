@@ -9,7 +9,7 @@ import Data.Monoid ((<>))
 import qualified Codec.JVM.ASM.Code as Code
 
 import Kuna.Kore.Syn (KoreExpr)
-import Kuna.Java.Syn (JExpr(..), JName(..), toFieldType)
+import Kuna.Java.Syn (JExpr(..), CName(..), toFieldType)
 import Kuna.Java.KoreComp (unsafeBuildJExpr)
 
 -- TODO Error handling! (return position, ...)
