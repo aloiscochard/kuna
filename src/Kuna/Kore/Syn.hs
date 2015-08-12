@@ -1,7 +1,7 @@
 {-# LANGUAGE DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
 module Kuna.Kore.Syn where
 
-import Bound (Scope, abstract)
+import Bound (Scope, abstract, abstract1)
 import Control.Monad (ap)
 import Control.Monad.Trans.Class (lift)
 import Data.List (elemIndex)
@@ -21,7 +21,7 @@ data Expr b
   | Lit Literal
   | App (Expr b) (Arg b)
   | Fld (Pre b) (Expr b) (Expr b)
---  | Lam (Scope Int Exp b)
+  | Lam (Scope () Expr b)
   | Let [Bind b] (Body b)
   deriving (Eq, Ord, Show, Read, Functor, Foldable, Traversable)
 
@@ -32,6 +32,9 @@ bindings :: Eq a => [(a, Expr a)] -> Expr a -> Expr a
 bindings [] b = b
 bindings bs b = Let (map (abstr . snd) bs) (abstr b)
   where abstr = abstract (`elemIndex` map fst bs)
+
+lambda :: Eq a => a -> Expr a -> Expr a
+lambda n expr = Lam $ abstract1 n expr
 
 data Literal = LitInt32 Word32
   deriving (Eq, Ord, Show, Read)
@@ -73,5 +76,5 @@ instance Monad Expr where
   Lit l >>= _ = Lit l
   App x y >>= f = App (x >>= f) (y >>= f)
   Fld p ok ko >>= f = Fld (p >>= f) (ok >>= f) (ko >>= f)
-  -- Lam e  >>= f = Lam (e >>>= f)
+  Lam e  >>= f = Lam (e >>= (lift . f))
   Let scopes expr >>= f = Let (fmap (>>= (lift . f)) scopes) (expr >>= (lift . f))

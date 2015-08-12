@@ -13,7 +13,7 @@ import qualified Data.ByteString.Lazy as BS
 
 import Kuna.Internal.PP (printDoc)
 import Kuna.Java.Syn.PP (prettyJExpr)
-import Kuna.Kore.Syn (Expr(..), KoreExpr, apply, bindings, litInt32, machineName, name, var)
+import Kuna.Kore.Syn (Expr(..), KoreExpr, apply, bindings, lambda, litInt32, machineName, name, var)
 import Kuna.Kore.Syn.PP (prettyExpr)
 
 import qualified Kuna.Java as J
@@ -28,6 +28,23 @@ varI = var . name
 
 bind :: [(Text, KoreExpr)] -> KoreExpr -> KoreExpr
 bind bs = bindings $ fmap (\(n, expr) -> (name n, expr)) bs
+
+lam :: Text -> KoreExpr -> KoreExpr
+lam n = lambda (name n)
+
+counterExpr :: KoreExpr
+counterExpr =
+  bind [("f", f)] $
+    App
+      (varI "f")
+      (litInt32 0)
+    where
+      f = lam "i" $
+        Fld
+          (apply (varM KMach.EqInt32) [litInt32 60000, varI "i"])
+          (varI "i")
+          (App (varI "f") $
+              apply (varM KMach.PlusInt32) [ varI "i", litInt32 1])
 
 conditionExpr :: KoreExpr
 conditionExpr =
@@ -66,5 +83,5 @@ main = do
   printDoc $ prettyJExpr jexpr
   BS.writeFile "Main.class" $ runPut . putClassFile $ mainClass $ J.compJExpr jexpr
     where
-      expr = localExpr
+      expr = counterExpr
       jexpr = JComp.unsafeBuildJExpr expr

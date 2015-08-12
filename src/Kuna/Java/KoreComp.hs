@@ -18,6 +18,20 @@ import Kuna.Java.KoreComp.Types
 import qualified Kuna.Kore.Mach as KMach
 import qualified Kuna.Kore.Syn as K
 
+{--
+bar :: A -> B -> C -> D
+
+foo :: A -> B -> C -> D
+foo a b = bar
+
+data JMethod = JMethod K.Name [(K.Name, JType)] JType JExpr
+
+uncurry :: K.Name -> KoreExpr -> KoreComp (Maybe JMethod)
+uncurry name expr = f expr [] where
+  f (Lam n e) xs = f e n:xs
+  f (App n e) xs = f e n:xs
+  --}
+
 buildJExpr :: KoreExpr -> ([Error], JCompExpr)
 buildJExpr expr = runKoreComp $ compExpr expr
 
@@ -99,3 +113,10 @@ doneOrFail ke f = do
         Done jexpr  -> f jexpr
         Partial _   -> throw "unexpected CallBldr"
         Failure     -> return Failure
+
+{--
+compExpr (Lam _) = throw "unexpected Lam"
+
+compExpr (Let (Bind (K.Name id' K.Internal) (Lam bexpr))  expr) = do
+  -- TODO Create methods (as fx, in writer?), and then bind ref
+  -- --}
