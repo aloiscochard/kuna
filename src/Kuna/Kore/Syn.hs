@@ -16,12 +16,16 @@ data Expr b
   | Fld (Pre b) (Expr b) (Expr b)
 --  | Lam b (Expr b)
   | Let (Bind b) (Expr b)
+  deriving (Eq, Ord, Show, Read)
 
 apply :: Expr b -> [Expr b] -> Expr b
 apply v as = foldr f v as where f a tree = App tree a
 
-data Literal =
-  LitInt32 Word32
+data Bind b = Bind b (Expr b)
+  deriving (Eq, Ord, Show, Read)
+
+data Literal = LitInt32 Word32
+  deriving (Eq, Ord, Show, Read)
 
 litInt32 :: Int -> Expr b
 litInt32 = Lit . LitInt32 . fromIntegral
@@ -32,12 +36,10 @@ bind txt e = Let $ Bind (Name txt Internal) e
 data Name = Name
   { nameId    :: Text
   , nameSort  :: NameSort }
-  deriving (Eq, Ord)
+  deriving (Eq, Ord, Show, Read)
 
 var :: Name -> KoreExpr
 var = Var
-
-data Bind b = Bind b (Expr b)
 
 name :: Text -> Name
 name id' = Name id' Internal
@@ -49,4 +51,5 @@ data NameSort
   = Internal
   -- | External Module
   | Machine
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord, Show, Read)
+

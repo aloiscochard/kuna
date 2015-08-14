@@ -32,10 +32,10 @@ conditionExpr =
 additionExpr :: KoreExpr
 additionExpr = bind "x" (litInt32 21) $ apply (varM KMach.PlusInt32) [varI "x", varI "x"]
 
-mainClass :: ClassFile
-mainClass = mkClassFile java8 [] "Main" Nothing
+mainClass :: KoreExpr -> ClassFile
+mainClass expr = mkClassFile java8 [] "Main" Nothing
   [ mkMethodDef [Public, Static] "foo"  []              (return jInt) $ fold
-    [ J.compExpr additionExpr
+    [ J.compExpr expr
     , ireturn ]
   , mkMethodDef [Public, Static] "main" [arr jString]  void          $ fold
     [ getstatic systemOut
@@ -49,4 +49,7 @@ mainClass = mkClassFile java8 [] "Main" Nothing
       printlnI    = mkMethodRef "java/io/PrintStream" "println" [jInt]                        void
 
 main :: IO ()
-main = BS.writeFile "Main.class" $ runPut . putClassFile $ mainClass
+main = do
+  print expr
+  BS.writeFile "Main.class" $ runPut . putClassFile $ mainClass expr
+    where expr = additionExpr
