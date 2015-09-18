@@ -4,6 +4,7 @@ import Codec.JVM.ASM.Code (Code)
 import Codec.JVM.Cond (Cond)
 import Codec.JVM.Const (ConstVal(..))
 import Codec.JVM.Types (IClassName, FieldType(..), PrimType(..), UName, jlObject, jlString)
+import Data.Word (Word8)
 
 import Kuna.Kore.Syn (Literal(..))
 import qualified Kuna.Kore.Mach as KMach
@@ -26,7 +27,7 @@ data CName
   | JOp     Code
 
 data VName
-  = JLocalVar Int JType
+  = JLocalVar JType Word8
   -- | JField
 
 data JExpr

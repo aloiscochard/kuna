@@ -11,7 +11,7 @@ import Data.Text (Text)
 
 import qualified Data.ByteString.Lazy as BS
 
-import Kuna.Kore.Syn (Expr(..), KoreExpr, apply, bind, litInt32, machineName, name, var)
+import Kuna.Kore.Syn (Expr(..), KoreExpr, apply, bindings, litInt32, machineName, name, var)
 
 import qualified Kuna.Java as J
 import qualified Kuna.Kore.Mach as KMach
@@ -22,6 +22,9 @@ varM = var . machineName . KMach.callId
 varI :: Text -> KoreExpr
 varI = var . name
 
+bind :: [(Text, KoreExpr)] -> KoreExpr -> KoreExpr
+bind bs = bindings $ fmap (\(n, expr) -> (name n, expr)) bs
+
 conditionExpr :: KoreExpr
 conditionExpr =
   (Fld
@@ -30,7 +33,7 @@ conditionExpr =
     (litInt32 16))
 
 additionExpr :: KoreExpr
-additionExpr = bind "x" (litInt32 21) $ apply (varM KMach.PlusInt32) [varI "x", varI "x"]
+additionExpr = bind [("x", litInt32 21)] $ apply (varM KMach.PlusInt32) [varI "x", varI "x"]
 
 mainClass :: KoreExpr -> ClassFile
 mainClass expr = mkClassFile java8 [] "Main" Nothing

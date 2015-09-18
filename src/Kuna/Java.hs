@@ -9,7 +9,7 @@ import Data.Monoid ((<>))
 import qualified Codec.JVM.ASM.Code as Code
 
 import Kuna.Kore.Syn (KoreExpr)
-import Kuna.Java.Syn (JExpr(..), CName(..), toFieldType)
+import Kuna.Java.Syn (JExpr(..), CName(..), VName(..), toFieldType)
 import Kuna.Java.KoreComp (unsafeBuildJExpr)
 
 -- TODO Error handling! (return position, ...)
@@ -23,9 +23,8 @@ compConst (CInteger i) | i < 32768  = Code.sipush jInt $ fromIntegral i
 compConst cv                        = Code.ldc cv
 
 compJExpr :: JExpr -> Code
-compJExpr (JConst c) = compConst c
-
-compJExpr (JCall name jts jargs jrt) = argsCode <> compCall name
+compJExpr (JConst c)                  = compConst c
+compJExpr (JCall name jts jargs jrt)  = argsCode <> compCall name
   where
     argsCode = (fold $ compJExpr <$> jargs)
     fts = toFieldType <$> jts
@@ -33,5 +32,7 @@ compJExpr (JCall name jts jargs jrt) = argsCode <> compCall name
     compCall (JMethod cn mn)  = Code.invokestatic mr where mr = mkMethodRef cn mn fts rt
     compCall (JOp c)          = c
 
-compJExpr (JIf cd p ok ko jrt) = compJExpr p <> Code.iif cd rt (compJExpr ok) (compJExpr ko) where
+compJExpr (JIf cd p ok ko jrt)       = compJExpr p <> Code.iif cd rt (compJExpr ok) (compJExpr ko) where
     rt = Just $ toFieldType jrt
+
+  -- | JLocal  BindLocal JExpr

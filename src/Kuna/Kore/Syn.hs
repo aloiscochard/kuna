@@ -1,11 +1,18 @@
+{-# LANGUAGE DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
 module Kuna.Kore.Syn where
 
--- import Bound (Var(..))
-import Data.Word (Word32)
+import Bound (Scope, abstract)
+import Control.Monad (ap)
+import Control.Monad.Trans.Class (lift)
+import Data.List (elemIndex)
 import Data.Text (Text)
+import Data.Word (Word32)
+import Prelude.Extras
 
 type Arg = Expr
 type Pre = Expr
+type Bind = Scope Int Expr
+type Body = Scope Int Expr
 
 type KoreExpr = Expr Name
 
@@ -14,24 +21,23 @@ data Expr b
   | Lit Literal
   | App (Expr b) (Arg b)
   | Fld (Pre b) (Expr b) (Expr b)
---  | Lam b (Expr b)
-  | Let (Bind b) (Expr b)
-  deriving (Eq, Ord, Show, Read)
+--  | Lam (Scope Int Exp b)
+  | Let [Bind b] (Body b)
+  deriving (Eq, Ord, Show, Read, Functor, Foldable, Traversable)
 
 apply :: Expr b -> [Expr b] -> Expr b
 apply v as = foldr f v as where f a tree = App tree a
 
-data Bind b = Bind b (Expr b)
-  deriving (Eq, Ord, Show, Read)
+bindings :: Eq a => [(a, Expr a)] -> Expr a -> Expr a
+bindings [] b = b
+bindings bs b = Let (map (abstr . snd) bs) (abstr b)
+  where abstr = abstract (`elemIndex` map fst bs)
 
 data Literal = LitInt32 Word32
   deriving (Eq, Ord, Show, Read)
 
 litInt32 :: Int -> Expr b
 litInt32 = Lit . LitInt32 . fromIntegral
-
-bind :: Text -> KoreExpr -> KoreExpr -> KoreExpr
-bind txt e = Let $ Bind (Name txt Internal) e
 
 data Name = Name
   { nameId    :: Text
@@ -53,3 +59,19 @@ data NameSort
   | Machine
   deriving (Eq, Ord, Show, Read)
 
+instance Eq1 Expr
+instance Ord1 Expr
+instance Show1 Expr
+instance Read1 Expr
+instance Applicative Expr where
+  pure = Var
+  (<*>) = ap
+
+instance Monad Expr where
+  return = Var
+  Var a >>= f = f a
+  Lit l >>= _ = Lit l
+  App x y >>= f = App (x >>= f) (y >>= f)
+  Fld p ok ko >>= f = Fld (p >>= f) (ok >>= f) (ko >>= f)
+  -- Lam e  >>= f = Lam (e >>>= f)
+  Let scopes expr >>= f = Let (fmap (>>= (lift . f)) scopes) (expr >>= (lift . f))

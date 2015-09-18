@@ -4,7 +4,6 @@ module Kuna.Kore.Mach where
 import Data.Text (Text)
 
 import qualified Data.Map.Strict as Map
-import qualified Data.Text as Text
 
 import Kuna.Kore.Syn (Name, machineName)
 
@@ -24,7 +23,7 @@ data Type
 data Call
   = EqInt32
   | PlusInt32
-  deriving (Bounded, Enum)
+  deriving (Bounded, Eq, Enum)
 
 calls :: [Call]
 calls = enumFrom $ minBound
