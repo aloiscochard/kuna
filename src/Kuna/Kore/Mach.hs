@@ -33,12 +33,8 @@ callName :: Call -> Name
 callName = machineName . callId
 
 callId :: Call -> Text
-callId c = Text.append "Kuna.Mach." $ callId' c
-
-
-callId' :: Call -> Text
-callId'   EqInt32       = "eqInt32"
-callId'   PlusInt32     = "plusInt32"
+callId EqInt32       = "eqInt32"
+callId PlusInt32     = "plusInt32"
 
 callTypes :: Call -> [Type]
 callTypes EqInt32       = [TyInt32, TyInt32, TyBool]
