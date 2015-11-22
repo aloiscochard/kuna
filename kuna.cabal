@@ -30,6 +30,7 @@ library
     Codec.JVM.Types
     Kuna.Internal
     Kuna.Kore.Syn
+    Kuna.Kore.Syn.PP
     Kuna.Kore.Mach
     Kuna.Java
     Kuna.Java.Syn
@@ -37,6 +38,7 @@ library
     Kuna.Java.KoreComp.Types
   build-depends:
       base                >= 4.6.0.1    && < 5
+    , ansi-wl-pprint      >= 0.6        && < 0.7
     , base16-bytestring   >= 0.1        && < 0.2
     , binary              >= 0.7        && < 0.8
     , bound               >= 1          && < 1.1

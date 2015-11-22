@@ -12,6 +12,7 @@ import Data.Text (Text)
 import qualified Data.ByteString.Lazy as BS
 
 import Kuna.Kore.Syn (Expr(..), KoreExpr, apply, bindings, litInt32, machineName, name, var)
+import Kuna.Kore.Syn.PP (prettyExpr)
 
 import qualified Kuna.Java as J
 import qualified Kuna.Kore.Mach as KMach
@@ -54,5 +55,8 @@ mainClass expr = mkClassFile java8 [] "Main" Nothing
 main :: IO ()
 main = do
   print expr
+  putStrLn ""
+  print $ prettyExpr expr
+  putStrLn ""
   BS.writeFile "Main.class" $ runPut . putClassFile $ mainClass expr
     where expr = additionExpr
