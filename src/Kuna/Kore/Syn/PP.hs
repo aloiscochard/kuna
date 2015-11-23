@@ -8,6 +8,7 @@ import Text.PrettyPrint.ANSI.Leijen
 import qualified Data.Text as T
 import qualified Data.Vector as V
 
+import Kuna.Internal.PP
 import Kuna.Kore.Syn hiding (bindings)
 
 prettyExpr :: KoreExpr -> Doc
@@ -21,12 +22,12 @@ prettyExpr (Fld p ok ko) =
 prettyExpr (Let scopes expr) =
   (nest 2 $ keyword "let" <$> binds) <$> (nest 2 $ keyword "in" <$> body)
     where
-      local i = Var $ Name (T.pack $ concat ["#", show i]) Internal
+      localVar i = Var $ Name (T.pack $ concat ["#", show i]) Internal
       binds = vsep . V.toList $ V.imap f bounds where
-        f i e = dullgreen (text $ concat ["#", show i]) <> space <> keyword "=" <> prettyExpr e
+        f i e = local i <> space <> keyword "=" <> prettyExpr e
       bounds = foldr f V.empty scopes where
-        f scope xs = V.snoc xs $ instantiate local scope
-      body = prettyExpr $ instantiate local expr
+        f scope xs = V.snoc xs $ instantiate localVar scope
+      body = prettyExpr $ instantiate localVar expr
 
 prettyExpr' :: KoreExpr -> Doc
 prettyExpr' expr@(Var _)  = prettyExpr expr
@@ -40,7 +41,4 @@ prettyName (Name id sort) = color $ text $ T.unpack id where
     Machine   -> dullcyan
 
 prettyLiteral :: Literal -> Doc
-prettyLiteral (LitInt32 w) = text $show w
-
-keyword :: String -> Doc
-keyword txt = dullyellow $ text txt <> space
+prettyLiteral (LitInt32 w) = text $ show w

@@ -5,6 +5,7 @@ module Codec.JVM.Cond where
 data Cond
   = EQ
   | NE
+  deriving (Eq, Ord, Show)
   {--
   | LT
   | LE

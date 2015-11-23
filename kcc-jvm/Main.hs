@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 import Codec.JVM.ASM (mkClassFile, mkMethodDef)
-import Codec.JVM.ASM.Code (getstatic, invokestatic, invokevirtual, ireturn, vreturn)
+import Codec.JVM.ASM.Code (Code, getstatic, invokestatic, invokevirtual, ireturn, vreturn)
 import Codec.JVM.Class (ClassFile, putClassFile)
 import Codec.JVM.Method (AccessFlag(..))
 import Codec.JVM.Types
@@ -11,10 +11,13 @@ import Data.Text (Text)
 
 import qualified Data.ByteString.Lazy as BS
 
+import Kuna.Internal.PP (printDoc)
+import Kuna.Java.Syn.PP (prettyJExpr)
 import Kuna.Kore.Syn (Expr(..), KoreExpr, apply, bindings, litInt32, machineName, name, var)
 import Kuna.Kore.Syn.PP (prettyExpr)
 
 import qualified Kuna.Java as J
+import qualified Kuna.Java.KoreComp as JComp
 import qualified Kuna.Kore.Mach as KMach
 
 varM :: KMach.Call -> KoreExpr
@@ -36,10 +39,10 @@ conditionExpr =
 additionExpr :: KoreExpr
 additionExpr = bind [("x", litInt32 21)] $ apply (varM KMach.PlusInt32) [varI "x", varI "x"]
 
-mainClass :: KoreExpr -> ClassFile
+mainClass :: Code -> ClassFile
 mainClass expr = mkClassFile java8 [] "Main" Nothing
   [ mkMethodDef [Public, Static] "foo"  []              (return jInt) $ fold
-    [ J.compExpr expr
+    [ expr
     , ireturn ]
   , mkMethodDef [Public, Static] "main" [arr jString]  void          $ fold
     [ getstatic systemOut
@@ -54,9 +57,10 @@ mainClass expr = mkClassFile java8 [] "Main" Nothing
 
 main :: IO ()
 main = do
-  print expr
+  printDoc $ prettyExpr expr
   putStrLn ""
-  print $ prettyExpr expr
-  putStrLn ""
-  BS.writeFile "Main.class" $ runPut . putClassFile $ mainClass expr
-    where expr = additionExpr
+  printDoc $ prettyJExpr jexpr
+  BS.writeFile "Main.class" $ runPut . putClassFile $ mainClass $ J.compJExpr jexpr
+    where
+      expr = additionExpr
+      jexpr = JComp.unsafeBuildJExpr expr

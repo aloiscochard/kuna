@@ -29,11 +29,13 @@ library
     Codec.JVM.Opcode
     Codec.JVM.Types
     Kuna.Internal
+    Kuna.Internal.PP
     Kuna.Kore.Syn
     Kuna.Kore.Syn.PP
     Kuna.Kore.Mach
     Kuna.Java
     Kuna.Java.Syn
+    Kuna.Java.Syn.PP
     Kuna.Java.KoreComp
     Kuna.Java.KoreComp.Types
   build-depends:

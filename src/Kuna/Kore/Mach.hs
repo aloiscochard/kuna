@@ -23,7 +23,7 @@ data Type
 data Call
   = EqInt32
   | PlusInt32
-  deriving (Bounded, Eq, Enum)
+  deriving (Bounded, Eq, Enum, Show)
 
 calls :: [Call]
 calls = enumFrom $ minBound

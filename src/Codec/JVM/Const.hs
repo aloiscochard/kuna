@@ -28,7 +28,11 @@ data Const
 data ConstVal
   = CInteger Int
   | CString Text
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord)
+
+instance Show ConstVal where
+  show (CInteger  x) = show x -- concat ["Int ", show x]
+  show (CString   x) = show x -- concat ["String ", show x]
 
 constValType :: ConstVal -> FieldType
 constValType (CInteger _) = BaseType JInt
