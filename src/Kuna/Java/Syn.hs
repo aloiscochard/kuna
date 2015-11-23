@@ -23,8 +23,12 @@ fromMachType KMach.TyInt32 = JPrim JInt
 fromMachType KMach.TyData  = JRef jlObject
 
 data CName
-  = JMethod IClassName UName
-  | JOp     Code
+  = JMethod IClassName  UName
+  | JOp     KMach.Call  Code
+
+instance Show CName where
+  show (JMethod (IClassName cn) (UName un))  = concat [show cn, ".", show un]
+  show (JOp call _)                          = show call
 
 data VName
   = JLocalVar JType Word8

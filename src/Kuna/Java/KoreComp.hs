@@ -43,7 +43,7 @@ compExpr (Var (K.Name id' K.Machine)) =
   maybe (throw $ printf "Machine call '%v' not found." id') f $ KMach.callsById id' where
     f call = return . Partial $ callBldr call $ mkJCall name call where
       name = case call of
-        KMach.PlusInt32 -> JOp Code.iadd
+        KMach.PlusInt32 -> JOp KMach.PlusInt32 Code.iadd
 
 compExpr (Var (K.Name id' K.Internal)) = throw $ printf "Not in scope: '%v'" id'
 

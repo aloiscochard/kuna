@@ -30,7 +30,7 @@ compJExpr (JCall name jts jargs jrt)  = argsCode <> compCall name
     fts = toFieldType <$> jts
     rt = Just $ toFieldType jrt
     compCall (JMethod cn mn)  = Code.invokestatic mr where mr = mkMethodRef cn mn fts rt
-    compCall (JOp c)          = c
+    compCall (JOp _ c)        = c
 
 compJExpr (JIf cd p ok ko jrt)       = compJExpr p <> Code.iif cd rt (compJExpr ok) (compJExpr ko) where
     rt = Just $ toFieldType jrt
