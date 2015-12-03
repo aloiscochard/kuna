@@ -74,7 +74,7 @@ sipush :: FieldType -> Word16 -> Code
 sipush ft w = pushBytes OP.sipush ft $ packWord16be w
 
 ldc :: ConstVal -> Code
-ldc cv = codeConst OP.ldc ft $ CValue cv where ft = constValType cv
+ldc cv = codeConst OP.ldc_w ft $ CValue cv where ft = constValType cv
 
 invoke :: Opcode -> MethodRef -> Code
 invoke oc mr@(MethodRef _ _ fts rt) = mkCode cs $ fold
