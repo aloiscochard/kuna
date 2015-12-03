@@ -119,3 +119,6 @@ vreturn = op OP.vreturn
 
 getstatic :: FieldRef -> Code
 getstatic fr@(FieldRef _ _ ft) = codeConst OP.getstatic ft $ CFieldRef fr
+
+anewarray :: IClassName -> Code
+anewarray cn = codeConst OP.anewarray (ObjectType cn) $ CClass cn
