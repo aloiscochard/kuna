@@ -6,6 +6,7 @@ import Kuna.Java.Syn (JExpr(..))
 
 import qualified Kuna.Kore.Mach as KMach
 
+-- TODO Better name?
 data CompExpr = Failure | Partial CallBldr | Done JExpr
 
 data CallBldr = CallBldr { buildCall :: JExpr -> CompExpr }
@@ -18,4 +19,4 @@ callBldr call mk = CallBldr $ f [] where
 
 data Error = Error String
 
-type KoreComp a = (RWS () [Error] () a)
+type KoreComp = (RWS () [Error] () CompExpr)

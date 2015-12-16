@@ -23,6 +23,7 @@ compConst (CInteger i) | i < 32768  = Code.sipush jInt $ fromIntegral i
 compConst cv                        = Code.ldc cv
 
 compJExpr :: JExpr -> Code
+compJExpr (JVar (JLocalVar n tpe))    = Code.aload (toFieldType tpe) n
 compJExpr (JConst c)                  = compConst c
 compJExpr (JCall name jts jargs jrt)  = argsCode <> compCall name
   where

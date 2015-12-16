@@ -33,7 +33,7 @@ instance Show CName where
   show (JOp call _)                          = concat ["Machine.", T.unpack $ KMach.callId call]
 
 data VName
-  = JLocalVar JType Word8
+  = JLocalVar Word8 JType
   -- | JField
 
 data JExpr
