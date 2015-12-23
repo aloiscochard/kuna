@@ -11,7 +11,8 @@ import Kuna.Java.Syn
 prettyJExpr :: JExpr -> Doc
 prettyJExpr (JVar vname) = prettyVName vname
 prettyJExpr (JConst cval) = red . text . show $ cval
-prettyJExpr (JCall n ts es rt) = nest 2 $ prettyCName n <> (tupled $ fmap prettyJExpr es) where
+prettyJExpr (JCall n ts es rt) = nest 2 $ prettyCName n <> (tupled $ fmap prettyJExpr es)
+prettyJExpr (JLocal (BindLocal i exp tpe) b) = local i <> space <> keyword "=" <> prettyJExpr exp <$$> prettyJExpr b
 
 prettyJType :: JType -> Doc
 prettyJType = dullmagenta . text . show
@@ -20,4 +21,4 @@ prettyCName :: CName -> Doc
 prettyCName cn  = dullcyan $ text $ show cn
 
 prettyVName :: VName -> Doc
-prettyVName (JLocalVar _ w) = local w
+prettyVName (JLocalVar w _) = local w
