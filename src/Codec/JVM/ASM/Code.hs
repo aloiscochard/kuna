@@ -111,8 +111,27 @@ ifne = iif CD.NE
 ifeq :: ReturnType -> Code -> Code -> Code
 ifeq = iif CD.EQ
 
+iload :: Word8 -> Code
+iload n = mkCode' $ f n <> cf where
+  f 0 = IT.op OP.iload_0
+  f 1 = IT.op OP.iload_1
+  f 2 = IT.op OP.iload_2
+  f 3 = IT.op OP.iload_3
+  f _ = fold [IT.op OP.iload, IT.bytes $ BS.singleton n]
+  cf = IT.mapStack $ CF.push jInt
+
 ireturn :: Code
 ireturn = op OP.ireturn
+
+istore :: Word8 -> Code
+istore n = mkCode' $ f n <> cfStack <> cfLocals where
+  f 0 = IT.op OP.istore_0
+  f 1 = IT.op OP.istore_1
+  f 2 = IT.op OP.istore_2
+  f 3 = IT.op OP.istore_3
+  f _ = fold [IT.op OP.istore, IT.bytes $ BS.singleton n]
+  cfStack = IT.mapStack $ CF.pop 1
+  cfLocals = IT.mapLocals $ CF.push jInt
 
 vreturn :: Code
 vreturn = op OP.vreturn
