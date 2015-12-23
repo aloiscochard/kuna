@@ -1,15 +1,22 @@
+{-# LANGUAGE DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
 module Kuna.Java.KoreComp.Types where
 
 import Control.Monad.Trans.RWS.Strict
 
-import Kuna.Java.Syn (JExpr(..))
+import Kuna.Java.Syn (JExpr(..), VName)
 
+import qualified Kuna.Kore.Syn as K
 import qualified Kuna.Kore.Mach as KMach
 
--- TODO Better name?
-data CompExpr = Failure | Partial CallBldr | Done JExpr
+type JKoreComp = KoreComp JExpr
+type JKoreExpr = K.Expr (Either VName K.Name)
+type JCompExpr = CompExpr JExpr
 
-data CallBldr = CallBldr { buildCall :: JExpr -> CompExpr }
+-- TODO Better name?
+data CompExpr a = Failure | Partial CallBldr | Done a
+  deriving (Functor, Foldable, Traversable)
+
+data CallBldr = CallBldr { buildCall :: JExpr -> CompExpr JExpr }
 
 callBldr :: KMach.Call -> ([JExpr] -> JExpr) -> CallBldr
 callBldr call mk = CallBldr $ f [] where
@@ -19,4 +26,4 @@ callBldr call mk = CallBldr $ f [] where
 
 data Error = Error String
 
-type KoreComp = (RWS () [Error] () CompExpr)
+type KoreComp a = (RWS () [Error] () (CompExpr a))

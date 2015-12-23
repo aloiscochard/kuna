@@ -43,7 +43,7 @@ data JExpr
   | JIf     Cond JExpr JExpr JExpr JType
   | JLocal  BindLocal JExpr
 
-data BindLocal = BindLocal Int JExpr JType
+data BindLocal = BindLocal Word8 JExpr JType
 
 jExprType :: JExpr -> JType
 jExprType (JConst (CInteger _)) = JPrim JInt

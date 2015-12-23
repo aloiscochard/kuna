@@ -39,6 +39,10 @@ conditionExpr =
 additionExpr :: KoreExpr
 additionExpr = bind [("x", litInt32 21)] $ apply (varM KMach.PlusInt32) [varI "x", varI "x"]
 
+localExpr :: KoreExpr
+localExpr = bind [("x", apply (varM KMach.PlusInt32) [litInt32 8, litInt32 4])] $
+  apply (varM KMach.PlusInt32) [varI "x", varI "x"]
+
 mainClass :: Code -> ClassFile
 mainClass expr = mkClassFile java8 [] "Main" Nothing
   [ mkMethodDef [Public, Static] "foo"  []              (return jInt) $ fold
@@ -62,5 +66,5 @@ main = do
   printDoc $ prettyJExpr jexpr
   BS.writeFile "Main.class" $ runPut . putClassFile $ mainClass $ J.compJExpr jexpr
     where
-      expr = additionExpr
+      expr = localExpr
       jexpr = JComp.unsafeBuildJExpr expr
