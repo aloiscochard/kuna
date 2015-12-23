@@ -2,6 +2,8 @@ module Codec.JVM.ASM.Code.CtrlFlow where
 
 import Codec.JVM.Types (FieldType, fieldSize)
 
+-- TODO Refactor locals support to be indexed by their indentifier (Word8), and max to be unique.
+
 data CtrlFlow = CtrlFlow
   { stack  :: Flow
   , locals :: Flow

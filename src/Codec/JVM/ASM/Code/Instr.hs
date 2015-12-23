@@ -71,8 +71,14 @@ op = Instr . op'
 op' :: Opcode -> InstrRWS ()
 op' = writeBytes . BS.singleton . opcode
 
+mapCtrlFlow :: (CtrlFlow -> CtrlFlow) -> Instr
+mapCtrlFlow f = Instr $ state s where s cf = (mempty, f cf)
+
 mapStack :: (Flow -> Flow) -> Instr
-mapStack f = Instr $ state s where s cf = (mempty, CF.mapStack f cf)
+mapStack f = mapCtrlFlow $ CF.mapStack f
+
+mapLocals :: (Flow -> Flow) -> Instr
+mapLocals f = mapCtrlFlow $ CF.mapLocals f
 
 writeBytes :: ByteString -> InstrRWS ()
 writeBytes bs = do
