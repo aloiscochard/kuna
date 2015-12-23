@@ -1,44 +1,50 @@
 module Codec.JVM.ASM.Code.CtrlFlow where
 
 import Codec.JVM.Types (FieldType, fieldSize)
-
--- TODO Refactor locals support to be indexed by their indentifier (Word8), and max to be unique.
+import Data.IntMap as IMap
+import Data.Word (Word8)
 
 data CtrlFlow = CtrlFlow
-  { stack  :: Flow
-  , locals :: Flow
+  { stack  :: Stack
+  , locals :: IntMap FieldType
   , offset :: Int }
   deriving Show
 
 empty :: CtrlFlow
 empty = CtrlFlow mempty mempty 0
 
+mapStack :: (Stack -> Stack) -> CtrlFlow -> CtrlFlow
+mapStack f cf = cf { stack = f $ stack cf }
+
 maxStack :: CtrlFlow -> Int
-maxStack = flowMax . stack
+maxStack = stackMax . stack
 
 maxLocals :: CtrlFlow -> Int
-maxLocals = flowMax . locals
+maxLocals = IMap.size . locals
 
 incOffset :: Int -> CtrlFlow -> CtrlFlow
 incOffset i cf = cf { offset = offset cf + i }
 
-mapStack :: (Flow -> Flow) -> CtrlFlow -> CtrlFlow
-mapStack f cf = cf { stack = f $ stack cf }
+load :: Word8 -> FieldType -> CtrlFlow -> CtrlFlow
+load n ft cf = cf { locals = IMap.insert (fromIntegral n) ft $ locals cf, stack = push ft $ stack cf }
 
-mapLocals :: (Flow -> Flow) -> CtrlFlow -> CtrlFlow
-mapLocals f cf = cf { locals = f $ locals cf }
+store :: Word8 -> FieldType -> CtrlFlow -> CtrlFlow
+store n ft cf = cf { locals = IMap.insert (fromIntegral n) ft $ locals cf, stack = pop ft $ stack cf }
 
-data Flow = Flow
-  { flowBytes :: [FieldType]
-  , flowMax   :: Int }
+data Stack = Stack
+  { stackVal    :: [FieldType]
+  , stackMax    :: Int }
   deriving Show
 
-instance Monoid Flow where
-  mempty = Flow mempty 0
-  mappend (Flow fs0 m0) (Flow fs1 m1) = Flow (fs1 ++ fs0) (max m0 m1)
+instance Monoid Stack where
+  mempty = Stack [] 0
+  mappend (Stack vs0 m0) (Stack vs1 m1) = Stack (vs1 ++ vs0) (max m0 m1)
 
-push :: FieldType -> Flow -> Flow
-push ft (Flow xs i) = Flow (replicate s ft ++ xs) (max i (length xs + s)) where s = fieldSize ft
+push :: FieldType -> Stack -> Stack
+push ft (Stack xs i) = Stack ys (max i $ sum $ fieldSize <$> ys) where ys = ft:xs
 
-pop :: Int -> Flow -> Flow
-pop s (Flow xs i) = Flow (drop s xs) i
+pop :: FieldType -> Stack -> Stack
+pop ft = pop' $ fieldSize ft
+
+pop' :: Int -> Stack -> Stack
+pop' s (Stack xs i) = Stack (drop s xs) i

@@ -5,7 +5,7 @@ import Data.ByteString (ByteString)
 
 import qualified Data.ByteString as BS
 
-import Codec.JVM.ASM.Code.CtrlFlow (CtrlFlow, Flow)
+import Codec.JVM.ASM.Code.CtrlFlow (CtrlFlow, Stack)
 import Codec.JVM.Attr (StackMapFrame(..), VerifType(..))
 import Codec.JVM.Const (Const)
 import Codec.JVM.Internal (packI16)
@@ -71,14 +71,8 @@ op = Instr . op'
 op' :: Opcode -> InstrRWS ()
 op' = writeBytes . BS.singleton . opcode
 
-mapCtrlFlow :: (CtrlFlow -> CtrlFlow) -> Instr
-mapCtrlFlow f = Instr $ state s where s cf = (mempty, f cf)
-
-mapStack :: (Flow -> Flow) -> Instr
-mapStack f = mapCtrlFlow $ CF.mapStack f
-
-mapLocals :: (Flow -> Flow) -> Instr
-mapLocals f = mapCtrlFlow $ CF.mapLocals f
+ctrlFlow :: (CtrlFlow -> CtrlFlow) -> Instr
+ctrlFlow f = Instr $ state s where s cf = (mempty, f cf)
 
 writeBytes :: ByteString -> InstrRWS ()
 writeBytes bs = do

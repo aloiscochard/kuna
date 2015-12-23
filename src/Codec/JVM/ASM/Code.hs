@@ -48,7 +48,7 @@ codeConst :: Opcode -> FieldType -> Const -> Code
 codeConst oc ft c = mkCode cs $ fold
   [ IT.op oc
   , IT.ix c
-  , IT.mapStack $ CF.push ft ]
+  , IT.ctrlFlow $ CF.mapStack $ CF.push ft ]
     where cs = CP.unpack c
 
 codeBytes :: ByteString -> Code
@@ -61,7 +61,7 @@ pushBytes :: Opcode -> FieldType -> ByteString -> Code
 pushBytes oc ft bs = mkCode' $ fold
   [ IT.op oc
   , IT.bytes bs
-  , IT.mapStack $ CF.push ft ]
+  , IT.ctrlFlow $ CF.mapStack $ CF.push ft ]
 
 --
 -- Operations
@@ -80,7 +80,7 @@ invoke :: Opcode -> MethodRef -> Code
 invoke oc mr@(MethodRef _ _ fts rt) = mkCode cs $ fold
   [ IT.op oc
   , IT.ix c
-  , IT.mapStack $ CF.pop (length fts) <> maybe mempty CF.push rt ]
+  , IT.ctrlFlow $ CF.mapStack $ CF.pop' (sum $ fieldSize <$> fts) <> maybe mempty CF.push rt ]
     where
       c = CMethodRef mr
       cs = CP.unpack c
@@ -96,7 +96,7 @@ invokestatic = invoke OP.invokestatic
 
 iadd :: Code
 iadd = mkCode' $ IT.op OP.iadd <> i where
-  i = IT.mapStack $ CF.pop 2 <> CF.push jInt
+  i = IT.ctrlFlow $ CF.mapStack $ CF.pop jInt <> CF.push jInt
 
 iif :: Cond -> ReturnType -> Code -> Code -> Code
 iif cond rt ok ko = mkCode cs $ IT.branch oc rt (instr ko) (instr ok) where
@@ -118,20 +118,19 @@ iload n = mkCode' $ f n <> cf where
   f 2 = IT.op OP.iload_2
   f 3 = IT.op OP.iload_3
   f _ = fold [IT.op OP.iload, IT.bytes $ BS.singleton n]
-  cf = IT.mapStack $ CF.push jInt
+  cf = IT.ctrlFlow $ CF.load n jInt
 
 ireturn :: Code
 ireturn = op OP.ireturn
 
 istore :: Word8 -> Code
-istore n = mkCode' $ f n <> cfStack <> cfLocals where
+istore n = mkCode' $ f n <> cf where
   f 0 = IT.op OP.istore_0
   f 1 = IT.op OP.istore_1
   f 2 = IT.op OP.istore_2
   f 3 = IT.op OP.istore_3
   f _ = fold [IT.op OP.istore, IT.bytes $ BS.singleton n]
-  cfStack = IT.mapStack $ CF.pop 1
-  cfLocals = IT.mapLocals $ CF.push jInt
+  cf = IT.ctrlFlow $ CF.store n jInt
 
 vreturn :: Code
 vreturn = op OP.vreturn
