@@ -1,7 +1,8 @@
 module Kuna.Kore.Syn.PP where
 
 import Prelude hiding ((<$>))
-import Bound (instantiate)
+import Data.Char (chr)
+import Bound (instantiate, instantiate1)
 import Bound.Scope (bindings)
 import Text.PrettyPrint.ANSI.Leijen
 
@@ -12,27 +13,35 @@ import Kuna.Internal.PP
 import Kuna.Kore.Syn hiding (bindings)
 
 prettyExpr :: KoreExpr -> Doc
-prettyExpr (Var b) = prettyName b
-prettyExpr (Lit l) = red $ prettyLiteral l
-prettyExpr (App lhs rhs) = prettyExpr' lhs <> space <> prettyExpr' rhs
-prettyExpr (Fld p ok ko) =
-  nest 2 $ keyword "if" <> prettyExpr p <$>
-    keyword "then" <> prettyExpr ok <$>
-    keyword "else" <> prettyExpr ko
-prettyExpr (Let scopes expr) =
+prettyExpr = prettyExpr' 0
+
+prettyExpr' :: Int -> KoreExpr -> Doc
+prettyExpr' _ (Var b) = prettyName b
+prettyExpr' _ (Lit l) = red $ prettyLiteral l
+prettyExpr' n (App lhs rhs) = prettyExpr'' n lhs <> space <> prettyExpr'' n rhs
+prettyExpr' n (Fld p ok ko) =
+  nest 2 $ keyword "if" <> prettyExpr' n p </>
+    keyword "then" <> prettyExpr' n ok </>
+    keyword "else" <> prettyExpr' n ko
+prettyExpr' n (Lam scope) =
+  keyword' "λ" <> local' name <> text "." </>
+  (prettyExpr' (n + 1) $ instantiate1 x scope) where
+    x = Var $ Name (T.pack $ "#" ++ name) Internal
+    name = [chr $ n + 97]
+prettyExpr' n (Let scopes expr) =
   (nest 2 $ keyword "let" <$> binds) <$> (nest 2 $ keyword "in" <$> body)
     where
       localVar i = Var $ Name (T.pack $ concat ["#", show i]) Internal
       binds = vsep . V.toList $ V.imap f bounds where
-        f i e = local i <> space <> keyword "=" <> prettyExpr e
+        f i e = local (show i) <> space <> keyword "=" <> prettyExpr' i e
       bounds = foldr f V.empty scopes where
         f scope xs = V.snoc xs $ instantiate localVar scope
-      body = prettyExpr $ instantiate localVar expr
+      body = prettyExpr' n  $ instantiate localVar expr
 
-prettyExpr' :: KoreExpr -> Doc
-prettyExpr' expr@(Var _)  = prettyExpr expr
-prettyExpr' expr@(Lit _)  = prettyExpr expr
-prettyExpr' expr          = lparen <> prettyExpr expr <> rparen
+prettyExpr'' :: Int -> KoreExpr -> Doc
+prettyExpr'' n expr@(Var _)  = prettyExpr' n expr
+prettyExpr'' n expr@(Lit _)  = prettyExpr' n expr
+prettyExpr'' n expr          = lparen <> prettyExpr' n expr <> rparen
 
 prettyName :: Name -> Doc
 prettyName (Name id sort) = color $ text $ T.unpack id where

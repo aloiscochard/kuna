@@ -7,7 +7,13 @@ printDoc :: Doc -> IO ()
 printDoc doc = displayIO stdout $ renderSmart 1 80 $ doc <> linebreak
 
 keyword :: String -> Doc
-keyword txt = dullyellow $ text txt <> space
+keyword txt = keyword' txt <> space
 
-local :: Show a => a -> Doc
-local i = dullgreen $ text $ concat ["#", show i]
+keyword' :: String -> Doc
+keyword' txt = dullyellow $ text txt
+
+local :: String -> Doc
+local txt = local' $ concat ["#", txt]
+
+local' :: String -> Doc
+local' txt = dullgreen $ text $ txt
