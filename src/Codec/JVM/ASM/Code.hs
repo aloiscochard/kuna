@@ -2,13 +2,15 @@ module Codec.JVM.ASM.Code where
 
 import Data.ByteString (ByteString)
 import Data.Foldable (fold)
+import Data.List (foldl')
 import Data.Monoid ((<>))
 import Data.Word (Word8, Word16)
 
 import qualified Data.ByteString as BS
 
 import Codec.JVM.ASM.Code.Instr (Instr, runInstr)
-import Codec.JVM.Attr (Attr(ACode, AStackMapTable))
+import Codec.JVM.ASM.Code.Types (Offset(..), StackMapTable(..))
+import Codec.JVM.Attr (Attr(ACode, AStackMapTable), StackMapFrame(..), VerifType(..))
 import Codec.JVM.Cond (Cond)
 import Codec.JVM.Const (Const(..), ConstVal, constValType)
 import Codec.JVM.ConstPool (ConstPool)
@@ -22,13 +24,25 @@ import qualified Codec.JVM.ASM.Code.Instr as IT
 import qualified Codec.JVM.ConstPool as CP
 import qualified Codec.JVM.Opcode as OP
 
+import qualified Data.IntMap.Strict as IntMap
+
 -- TODO Return `Either` with error (currently CF.pop is unsafe)
 toAttrs :: Int -> ConstPool -> Code -> [Attr]
 toAttrs as cp code = f $ runInstr (instr code) cp where
-  f (xs, cf, frames) = [ACode maxStack' maxLocals' xs attrs] where
+  f (xs, cf, smt) = [ACode maxStack' maxLocals' xs attrs] where
       maxLocals' = max as $ CF.maxLocals cf
       maxStack' = CF.maxStack cf
       attrs = if null frames then [] else [AStackMapTable frames]
+      frames = toStackMapFrames smt
+
+-- TODO Optimization: For now we only generate Same or Full frames, we could encode better intermediate cases.
+toStackMapFrames :: StackMapTable -> [(Offset, StackMapFrame)]
+toStackMapFrames (StackMapTable cfs) = reverse (fst $ foldl' f ([], CF.empty) $ IntMap.toAscList cfs) where
+    f (xs, last) (off, cf) = ((Offset off, smf):xs, cf) where
+      smf = if CF.equiv last cf then SameFrame else fullFrame cf
+    fullFrame cf = FullFrame lvts svts where
+      lvts = fmap f $ IntMap.toList $ CF.locals cf where f (_, ft) = VerifType ft
+      svts = fmap VerifType $ CF.stackVal $ CF.stack cf
 
 data Code = Code
   { consts  :: [Const]
@@ -99,11 +113,9 @@ iadd = mkCode' $ IT.op OP.iadd <> i where
   i = IT.ctrlFlow $ CF.mapStack $ CF.pop jInt <> CF.push jInt
 
 iif :: Cond -> ReturnType -> Code -> Code -> Code
-iif cond rt ok ko = mkCode cs $ IT.branch oc rt (instr ko) (instr ok) where
+iif cond rt ok ko = mkCode cs ins where
   cs = [ok, ko] >>= consts
-  oc = case cond of
-          CD.EQ -> OP.ifeq
-          CD.NE -> OP.ifne
+  ins = IT.iif cond (instr ok) (instr ko)
 
 ifne :: ReturnType -> Code -> Code -> Code
 ifne = iif CD.NE

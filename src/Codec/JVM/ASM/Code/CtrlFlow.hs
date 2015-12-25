@@ -1,17 +1,19 @@
 module Codec.JVM.ASM.Code.CtrlFlow where
 
 import Codec.JVM.Types (FieldType, fieldSize)
-import Data.IntMap as IMap
+import Data.IntMap.Strict as IntMap
 import Data.Word (Word8)
 
 data CtrlFlow = CtrlFlow
   { stack  :: Stack
-  , locals :: IntMap FieldType
-  , offset :: Int }
-  deriving Show
+  , locals :: IntMap FieldType }
+  deriving (Eq, Show)
 
 empty :: CtrlFlow
-empty = CtrlFlow mempty mempty 0
+empty = CtrlFlow mempty mempty
+
+equiv :: CtrlFlow -> CtrlFlow -> Bool
+equiv cf0 cf1 = (locals cf0 == locals cf1) && (stackVal $ stack cf0) == (stackVal $ stack cf1)
 
 mapStack :: (Stack -> Stack) -> CtrlFlow -> CtrlFlow
 mapStack f cf = cf { stack = f $ stack cf }
@@ -20,21 +22,18 @@ maxStack :: CtrlFlow -> Int
 maxStack = stackMax . stack
 
 maxLocals :: CtrlFlow -> Int
-maxLocals = IMap.size . locals
-
-incOffset :: Int -> CtrlFlow -> CtrlFlow
-incOffset i cf = cf { offset = offset cf + i }
+maxLocals = IntMap.size . locals
 
 load :: Word8 -> FieldType -> CtrlFlow -> CtrlFlow
-load n ft cf = cf { locals = IMap.insert (fromIntegral n) ft $ locals cf, stack = push ft $ stack cf }
+load n ft cf = cf { locals = IntMap.insert (fromIntegral n) ft $ locals cf, stack = push ft $ stack cf }
 
 store :: Word8 -> FieldType -> CtrlFlow -> CtrlFlow
-store n ft cf = cf { locals = IMap.insert (fromIntegral n) ft $ locals cf, stack = pop ft $ stack cf }
+store n ft cf = cf { locals = IntMap.insert (fromIntegral n) ft $ locals cf, stack = pop ft $ stack cf }
 
 data Stack = Stack
   { stackVal    :: [FieldType]
   , stackMax    :: Int }
-  deriving Show
+  deriving (Eq, Show)
 
 instance Monoid Stack where
   mempty = Stack [] 0

@@ -3,13 +3,17 @@ module Codec.JVM.Attr where
 
 import Data.ByteString (ByteString)
 import Data.Binary.Put (Put, putByteString, putWord8, runPut)
+import Data.Foldable (traverse_)
+import Data.IntMap.Strict (IntMap)
 import Data.Text (Text)
 import Data.List (foldl')
 
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
+import qualified Data.IntMap.Strict as IntMap
 import qualified Data.Text as Text
 
+import Codec.JVM.ASM.Code.Types (Offset(..))
 import Codec.JVM.Const (Const(CUTF8))
 import Codec.JVM.ConstPool (ConstPool, putIx)
 import Codec.JVM.Internal (putI16, putI32)
@@ -21,7 +25,7 @@ data Attr
     , maxLocals :: Int
     , code      :: ByteString
     , codeAttrs :: [Attr] }
-  | AStackMapTable [StackMapFrame]
+  | AStackMapTable [(Offset, StackMapFrame)]
 
 instance Show Attr where
   show attr = "A" ++ (Text.unpack $ attrName attr)
@@ -59,25 +63,27 @@ putAttrBody _ (AStackMapTable xs) = do
 -- Offsets are absolute (the delta conversion happen during serialization)
 
 data StackMapFrame
-  = SameFrame Int
-  | SameLocals Int VerifType
+  = SameFrame
+  | SameLocals VerifType
+  | FullFrame [VerifType] [VerifType]
   deriving (Eq, Show)
 
-instance Ord StackMapFrame where
-  compare smf0 smf1 = compare (stackMapFrameOffset smf0) (stackMapFrameOffset smf1)
-
-stackMapFrameOffset :: StackMapFrame -> Int
-stackMapFrameOffset (SameFrame x)     = x
-stackMapFrameOffset (SameLocals x _)  = x
-
-putStackMapFrames :: [StackMapFrame] -> Put
+putStackMapFrames :: [(Offset, StackMapFrame)] -> Put
 putStackMapFrames xs = snd $ foldl' f ((0, return ())) xs where
-  f (offset, put) frame = (stackMapFrameOffset frame, put *> putFrame frame) where
-    putFrame (SameFrame i)      =
-      putWord8 $ fromIntegral (if offset == 0 then i else i)
-    putFrame (SameLocals i vt)  = do
-      putWord8 $ fromIntegral (i - (offset + 1)) + 64
+  f (offset, put) (Offset frameOffset, frame) = (frameOffset, put *> putFrame frame) where
+    delta = fromIntegral $ frameOffset - if offset == 0 then 0 else offset + 1
+    putFrame SameFrame =
+      putWord8 $ delta
+    putFrame (SameLocals vt) = do
+      putWord8 $ delta + 64
       putVerifType vt
+    putFrame (FullFrame locals stack) = do
+      putWord8 255
+      putI16 $ fromIntegral delta
+      putI16 $ length locals
+      traverse_ putVerifType locals
+      putI16 $ length stack
+      traverse_ putVerifType stack
 
 newtype VerifType = VerifType FieldType
   deriving (Eq, Show)

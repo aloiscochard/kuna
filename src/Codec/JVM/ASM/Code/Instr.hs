@@ -1,23 +1,30 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Codec.JVM.ASM.Code.Instr where
 
 import Control.Monad.Trans.RWS
 import Data.ByteString (ByteString)
+import Data.IntMap.Strict (IntMap)
+import Data.Monoid ((<>))
 
 import qualified Data.ByteString as BS
+import qualified Data.IntMap.Strict as IntMap
 
 import Codec.JVM.ASM.Code.CtrlFlow (CtrlFlow, Stack)
+import Codec.JVM.ASM.Code.Types (Offset(..), StackMapTable(..))
 import Codec.JVM.Attr (StackMapFrame(..), VerifType(..))
+import Codec.JVM.Cond (Cond)
 import Codec.JVM.Const (Const)
 import Codec.JVM.Internal (packI16)
 import Codec.JVM.Opcode (Opcode, opcode)
 import Codec.JVM.ConstPool (ConstPool)
-import Codec.JVM.Types (ReturnType)
+import Codec.JVM.Types (ReturnType, jInt)
 
 import qualified Codec.JVM.ASM.Code.CtrlFlow as CF
+import qualified Codec.JVM.Cond as CD
 import qualified Codec.JVM.ConstPool as CP
 import qualified Codec.JVM.Opcode as OP
 
-type InstrRWS a = (RWS ConstPool (ByteString, [StackMapFrame]) CtrlFlow a)
+type InstrRWS a = (RWS ConstPool (ByteString, StackMapTable) (Offset, CtrlFlow) a)
 
 newtype Instr = Instr (InstrRWS ())
 
@@ -30,32 +37,42 @@ instance Monoid Instr where
     rws0
     rws1
 
-runInstr :: Instr -> ConstPool -> (ByteString, CtrlFlow, [StackMapFrame])
-runInstr instr cp = runInstr' instr cp CF.empty
+runInstr :: Instr -> ConstPool -> (ByteString, CtrlFlow, StackMapTable)
+runInstr instr cp = runInstr' instr cp 0 CF.empty
 
-runInstr' :: Instr -> ConstPool -> CtrlFlow -> (ByteString, CtrlFlow, [StackMapFrame])
-runInstr' (Instr instr) cp cf = f $ runRWS instr cp cf where
-  f (_, cf', (bs, smfs)) = (bs, cf', smfs)
+runInstr' :: Instr -> ConstPool -> Offset -> CtrlFlow -> (ByteString, CtrlFlow, StackMapTable)
+runInstr' (Instr instr) cp offset cf = f $ runRWS instr cp (offset, cf) where
+  f (_, (_, cf'), (bs, smfs)) = (bs, cf', smfs)
 
-branch :: Opcode -> ReturnType -> Instr -> Instr -> Instr
-branch oc rt br0 br1 = Instr $ do
-  op' oc
-  writeJump br0 6
-  op' OP.goto
-  writeStackMapFrame $ \offset -> SameFrame $ offset + 2
-  writeJump br1 3
-  case rt of
-    Nothing -> writeStackMapFrame SameFrame
-    Just ft -> writeStackMapFrame $ \offset -> SameLocals offset $ VerifType ft
-  where
-    writeJump instr padding = do
-      cp <- ask
-      cf <- get
-      let (bs, cf', smfs) = runInstr' instr cp (CF.incOffset 2 cf)
-      let relativeOffset = BS.length bs + padding
-      writeBytes $ packI16 relativeOffset
-      tell (bs, smfs)
-      put cf'
+iif :: Cond -> Instr -> Instr -> Instr
+iif cond ok ko = Instr $ do
+  lengthOp <- writeInstr ifop
+  branches lengthOp
+    where
+      ifop = op oc <> (ctrlFlow $ CF.mapStack $ CF.pop jInt) where
+        oc = case cond of
+          CD.EQ -> OP.ifeq
+          CD.NE -> OP.ifne
+      branches :: Int -> InstrRWS ()
+      branches lengthOp = do
+        (_, cf) <- get
+        (koBytes, koCF, koFrames) <- pad 2 ko -- packI16
+        writeBytes . packI16 $ BS.length koBytes + lengthJumpOK + lengthOp + 2 -- packI16
+        write koBytes koFrames
+        (okBytes, okCF, okFrames) <- pad lengthJumpOK ok
+        op' OP.goto
+        writeBytes . packI16 $ BS.length okBytes + 3 -- op goto <> packI16 $ length ok
+        writeStackMapFrame
+        write okBytes okFrames
+        putCtrlFlow $ okCF { CF.locals = IntMap.union (CF.locals okCF) (CF.locals koCF)}
+        writeStackMapFrame
+          where
+            pad padding instr = do
+              cp <- ask
+              (Offset offset, cf) <- get
+              return $ runInstr' instr cp (Offset $ offset + padding) cf
+            lengthKO = 0
+            lengthJumpOK = 3 -- op goto <> pack16 $ length ko
 
 bytes :: ByteString -> Instr
 bytes = Instr . writeBytes
@@ -72,15 +89,34 @@ op' :: Opcode -> InstrRWS ()
 op' = writeBytes . BS.singleton . opcode
 
 ctrlFlow :: (CtrlFlow -> CtrlFlow) -> Instr
-ctrlFlow f = Instr $ state s where s cf = (mempty, f cf)
+ctrlFlow f = Instr $ state s where s (off, cf) = (mempty, (off, f cf))
+
+putCtrlFlow :: CtrlFlow -> InstrRWS ()
+putCtrlFlow cf = do
+  (off, _) <- get
+  put (off, cf)
+
+incOffset :: Int -> Instr
+incOffset = Instr . incOffset'
+
+incOffset' :: Int -> InstrRWS ()
+incOffset' i = state s where s (Offset off, cf) = (mempty, (Offset $ off + i, cf))
+
+write :: ByteString -> StackMapTable-> InstrRWS ()
+write bs smfs = do
+  incOffset' $ BS.length bs
+  tell (bs, smfs)
 
 writeBytes :: ByteString -> InstrRWS ()
-writeBytes bs = do
-  modify $ CF.incOffset (BS.length bs)
-  tell (bs, mempty)
+writeBytes bs = write bs mempty
 
-writeStackMapFrame :: (Int -> StackMapFrame) -> InstrRWS ()
-writeStackMapFrame f = do
-  cf <- get
-  tell (mempty, [f $ CF.offset cf])
+writeInstr :: Instr -> InstrRWS Int
+writeInstr (Instr action) = do
+  (Offset off0, _) <- get
+  action
+  (Offset off1, _) <- get
+  return (off1 - off0)
 
+writeStackMapFrame :: InstrRWS ()
+writeStackMapFrame = get >>= f where
+  f (Offset offset, cf) = tell (mempty, StackMapTable $ IntMap.singleton offset cf)
