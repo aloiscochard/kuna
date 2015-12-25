@@ -64,7 +64,9 @@ iif cond ok ko = Instr $ do
         writeBytes . packI16 $ BS.length okBytes + 3 -- op goto <> packI16 $ length ok
         writeStackMapFrame
         write okBytes okFrames
-        putCtrlFlow $ okCF { CF.locals = IntMap.union (CF.locals okCF) (CF.locals koCF)}
+        putCtrlFlow $ okCF
+          { CF.locals = IntMap.union (CF.locals okCF) (CF.locals koCF)
+          , CF.stack  = (CF.stack okCF) { CF.stackMax = max (CF.stackMax $ CF.stack okCF) (CF.stackMax $ CF.stack koCF)} }
         writeStackMapFrame
           where
             pad padding instr = do
