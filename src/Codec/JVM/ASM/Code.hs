@@ -112,15 +112,15 @@ iadd :: Code
 iadd = mkCode' $ IT.op OP.iadd <> i where
   i = IT.ctrlFlow $ CF.mapStack $ CF.pop jInt <> CF.push jInt
 
-iif :: Cond -> ReturnType -> Code -> Code -> Code
-iif cond rt ok ko = mkCode cs ins where
+iif :: Cond -> Code -> Code -> Code
+iif cond ok ko = mkCode cs ins where
   cs = [ok, ko] >>= consts
   ins = IT.iif cond (instr ok) (instr ko)
 
-ifne :: ReturnType -> Code -> Code -> Code
+ifne :: Code -> Code -> Code
 ifne = iif CD.NE
 
-ifeq :: ReturnType -> Code -> Code -> Code
+ifeq :: Code -> Code -> Code
 ifeq = iif CD.EQ
 
 iload :: Word8 -> Code

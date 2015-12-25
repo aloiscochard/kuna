@@ -34,8 +34,7 @@ compJExpr (JCall name jts jargs jrt)  = argsCode <> compCall name
     compCall (JOp _ c)        = c
 
 compJExpr (JIf cd p ok ko jrt) =
-  compJExpr p <> Code.iif cd rt (compJExpr ok) (compJExpr ko) where
-    rt = Just $ toFieldType jrt
+  compJExpr p <> Code.iif cd (compJExpr ok) (compJExpr ko)
 
 compJExpr (JLocal (BindLocal n exp tpe) exp') =
   compJExpr exp <> Code.istore n <> compJExpr exp'
