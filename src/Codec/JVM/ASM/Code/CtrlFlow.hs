@@ -22,7 +22,7 @@ maxStack :: CtrlFlow -> Int
 maxStack = stackMax . stack
 
 maxLocals :: CtrlFlow -> Int
-maxLocals = IntMap.size . locals
+maxLocals = maybe 0 (succ . fst . fst) . IntMap.maxViewWithKey . locals
 
 load :: Word8 -> FieldType -> CtrlFlow -> CtrlFlow
 load n ft cf = cf { locals = IntMap.insert (fromIntegral n) ft $ locals cf, stack = push ft $ stack cf }
